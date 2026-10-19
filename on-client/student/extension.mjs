@@ -26,7 +26,7 @@ export function createStudentView() {
         parent.append(node);
         return node;
       };
-      const statusLabel = (labels, value) => labels[value] || '확인 불가';
+      const statusLabel = (labels, value) => `${labels[value] || '확인 불가'}(${value})`;
 
       const addResource = (name, resource, renderData) => {
         const group = document.createElement('section');
