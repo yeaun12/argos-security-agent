@@ -494,9 +494,14 @@ export function createStudentView() {
         return root;
       }
 
-      if (status === 'ok' && data?.transportChecked === true &&
-          (data.audienceAuthorization === 'test' || data.audienceAuthorization === 'verified') &&
-          Number.isInteger(data.modelCount) && data.modelCount >= 0) {
+      // 연결 모드·검사 시각·권한이 모순되면 모델 점검 성공으로 표시하지 않는다.
+      const modelCheckValid = status === 'ok' && data?.transportChecked === true &&
+        (data.audienceAuthorization === 'test' || data.audienceAuthorization === 'verified') &&
+        Number.isInteger(data.modelCount) && data.modelCount >= 0 && data.modelCount <= 10000 &&
+        typeof checkedAt === 'string' && Number.isFinite(Date.parse(checkedAt)) &&
+        mode !== 'disconnected' && mode !== 'unknown' &&
+        !(mode === 'demo' && data.audienceAuthorization === 'verified');
+      if (modelCheckValid) {
         add(data.audienceAuthorization === 'test'
           ? '시험 연결 점검(test) · 실제 앱 권한 확인은 아닙니다.'
           : '앱 권한 확인 후 점검(verified) · 점검 당시 모델 응답을 확인했습니다.');
@@ -544,18 +549,24 @@ export function createStudentView() {
         add('기존 보안 기록은 그대로 유지됩니다. 설명 실패는 기록의 삭제나 보안 조치 실행을 뜻하지 않습니다.');
         return root;
       }
-      if (status === 'ok' && typeof event?.id === 'string' && event.id &&
-          typeof explanation?.data?.summary === 'string' && explanation.data.summary.trim()) {
+      // 17단계 summary-only 계약을 유지하되, 전달된 실행·사람 확인·모드의 모순은 거절한다.
+      const result = explanation?.data;
+      const validId = typeof event?.id === 'string' && /^[A-Za-z0-9][A-Za-z0-9._:-]{0,79}$/.test(event.id);
+      const validSummary = typeof result?.summary === 'string' && result.summary.trim().length > 0 && result.summary.length <= 1500;
+      const validExecution = result && (!Object.hasOwn(result, 'executed') || result.executed === false) &&
+        (!Object.hasOwn(result, 'requiresHumanConfirmation') || result.requiresHumanConfirmation === true);
+      const isRealOrUnspecifiedMode = !['demo', 'disconnected', 'unknown'].includes(explanation?.mode);
+      if (status === 'ok' && validId && validSummary && validExecution && isRealOrUnspecifiedMode) {
         root.setAttribute('data-student-explanation-event', event.id);
         add(`사건 ID: ${event.id}`);
         add(`AI 설명 요약: ${explanation.data.summary}`);
-        if (typeof checkedAt === 'string' && checkedAt) add(`설명 확인 시각: ${checkedAt}`);
+        if (typeof checkedAt === 'string' && Number.isFinite(Date.parse(checkedAt))) add(`설명 확인 시각: ${checkedAt}`);
         add('이 설명은 선택한 사건의 AI 해석입니다. 실제 사건 근거와 현재 상태를 별도로 확인하세요.');
         add('AI 설명은 보안 조치를 실행하지 않습니다.');
         return root;
       }
       if (status === 'ok') {
-        add('AI 설명 확인 불가: 선택한 사건 ID나 설명 요약을 확인하지 못했습니다.');
+        add('AI 설명 확인 불가: 사건 ID·요약·실행 여부 또는 연결 상태를 검증하지 못했습니다.');
         add('기존 보안 기록은 그대로 유지됩니다.');
         return root;
       }
