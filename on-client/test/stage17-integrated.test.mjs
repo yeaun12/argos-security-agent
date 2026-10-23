@@ -18,9 +18,19 @@ class ElementStub {
 globalThis.document={createElement:tag=>new ElementStub(tag)};
 const view=createStudentView();
 const now='2026-10-22T06:30:00.000Z';
+// Stage 18 requires a complete selected incident and exact evidence references.
 const sample=(overrides={})=>({
-  event:{id:'E1'},
-  explanation:{status:'ok',mode:'connected',data:{summary:'모의 사건 설명',executed:false,requiresHumanConfirmation:true},...overrides},
+  event:{
+    id:'E1',
+    evidence:[{id:'e-01',text:'접속 시도 횟수가 기준을 초과했습니다.'}],
+    rules:[{id:'r-01',text:'반복 접속 시도 탐지'}],
+    state:{access:'unknown',session:'active',device:'compliant'},
+    supportedActions:[],
+  },
+  explanation:{status:'ok',mode:'connected',data:{
+    summary:'모의 사건 설명',evidenceIds:['e-01'],proposals:[],
+    executed:false,requiresHumanConfirmation:true,
+  },...overrides},
   checkedAt:now,
 });
 
