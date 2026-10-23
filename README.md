@@ -4,6 +4,16 @@ ARGOS는 기존 접속·XDR 사건 기록을 보여 주고, 별도 승인을 받
 
 앱 실행·운영 안내는 [on-client/README.md](on-client/README.md), 학생 구현은 [on-client/student/extension.mjs](on-client/student/extension.mjs)에 있습니다. 제공 서버·AI 전송 파일은 학생 구현과 분리하여 보존합니다.
 
+## 22단계 · 새 환경 재현과 인수인계 기록
+
+**[22단계 학생 재현·릴리스 기록](on-client/docs/STUDENT_RELEASE_RECORD.md)**
+
+- **기준:** 21단계 학생 소스를 보존한 `stage22/reproducible-release-20261023` 브랜치. 22단계 커밋 40자리는 실제 `git rev-parse HEAD`로 확인하고, 새 빈 폴더에서 **그 동일 커밋**을 체크아웃해 결과를 기록한다.
+- **상태:** 검증 중인 학생 결과물. 새 폴더 클론·실행·종료·재실행과 22단계 공식 원문 판정은 **아직 미실시**다. 기존 20단계 모의 테스트 42/42 및 21단계 원본 폴더 브라우저 확인을 별도 증거로 기록했다.
+- **인수인계:** 비밀 설정·계정·SDP 원천 로그를 복사하지 않으며, 코드/문서 Git 백업과 운영 데이터 보존 책임을 분리한다. 미지원 실집행(19단계)과 외부 연결 미확인을 `v1.0`으로 표기하지 않는다.
+
+---
+
 ## 21단계 학생용 실행 설명서와 시스템 구성도
 
 **[ARGOS 학생 실행 설명서·Mermaid 구성도·검증 기록](on-client/docs/STUDENT_RUNBOOK.md)**
