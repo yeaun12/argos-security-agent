@@ -54,7 +54,8 @@ test('stage20: error displays safe cause without previous vulnerabilities',()=>{
   assert.equal(rows(failure).length,0);
   assert.match(failure.textContent,/조회 실패\(error\)/);
   assert.match(failure.textContent,/조회 제한 시간 초과/);
-  assert.doesNotMatch(failure.textContent,/CVE-2026-12345|취약점 없음/);
+  assert.doesNotMatch(failure.textContent,/CVE-2026-12345/);
+  assert.match(failure.textContent,/취약점 없음으로 해석하지 않습니다/);
 });
 test('stage20: all aggregate states retain their distinct meaning',()=>{
   for(const [status,needle] of [
