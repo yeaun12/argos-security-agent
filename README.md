@@ -9,9 +9,9 @@ ARGOS는 기존 접속·XDR 사건 기록을 보여 주고, 별도 승인을 받
 **[ARGOS 학생 실행 설명서·Mermaid 구성도·검증 기록](on-client/docs/STUDENT_RUNBOOK.md)**
 
 - **기능:** 사용자 계정·기기·세션, 접근 제어·XDR 기록, 근거 기반 AI 참고 설명, 조치 요청 상태, OSV 취약점 조회 결과를 분리 표시한다. 실제 원천 판정과 조치 집행은 제공 시스템의 책임이다.
-- **환경·버전:** Windows PowerShell, Git, Node.js 22~24(기준 24.19.0). `on-client/package.json`은 **0.2.11**이고 Native Host 실행 스크립트만 별도 보완했다. 실제 학생 PC의 정확한 Node/Git 버전은 미확인이다.
+- **환경·버전:** Windows PowerShell, Git, Node.js 22~24(기준 24.19.0). `on-client/package.json`은 **0.2.11**이고 Native Host 실행 스크립트만 별도 보완했다. 실제 학생 PC에서 확인한 Node.js는 **v24.21.0**, Git은 **2.55.0.windows.3**이다.
 - **실행 위치:** `%LOCALAPPDATA%\ALEPH\Workbench\projects\아르고스-방어전\on-client`.
-- **기존에 사용한 실행 명령:** `powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\start-alekov.ps1" -Port 5190`. 주소 `http://127.0.0.1:5190/`. 새 PowerShell 창에서 해당 설명서대로 재실행하는 검사는 미확인이다.
+- **기존에 사용한 실행 명령:** `powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\start-alekov.ps1" -Port 5190`. 주소 `http://127.0.0.1:5190/`. 2026-10-23 새 PowerShell에서 서버 시작·브라우저 세 탭 확인·종료·재실행 후 세 탭 복귀까지 **학생이 직접 확인했다**.
 - **시스템 관계:** `public/app.js` → `src/server.mjs` → 기존 SDP/XDR(운영 승인 시)·AI 게이트(승인 시); 별도 OSV 검사가 있다. 학생 `student/extension.mjs`는 표시만 담당한다.
 - **검증 기록:** 2026-10-23 학생 PC에서 `node --test` **42/42 PASS**, 0 FAIL. 실제 AI 모델 호출·원천 조치·OSV 조회 및 21단계 공식 통과는 미확인이다.
 
