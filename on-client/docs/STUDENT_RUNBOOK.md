@@ -73,9 +73,22 @@ Test-Path -LiteralPath ".\tools\start-alekov.ps1"
 
 `git status --short`가 빈 출력이면 현재 추적 작업 파일에 미커밋 변경이 없는 상태다. 변경 사항이 있다면 보존하고 확인한다. `Test-Path` 세 건은 모두 `True`여야 한다. 실제 `node --version`·`git --version` 값을 실행 후 기록해야 하며, 문서에는 미리 정해 넣지 않는다.
 
-### 3.2 앱 시작
+### 3.2 실행 방식과 Native Host 자동 준비(코드 기준)
 
-기존에 접근한 포트 5190을 사용하며, **현재 PowerShell 위치는 `on-client`**여야 한다.
+**실행 방식에 따라 Native Host 설정 유무가 다르다.** 아래 비교는 `tools/start-alekov.ps1`, `tools/prepare-native-host.ps1`, `package.json`, `src/server.mjs`의 실제 분기를 확인해 작성했다. **설정 준비는 로그인·승인·AI 호출 완료가 아니다.**
+
+| `on-client` 폴더에서 실행하는 명령 | Native Host 처리 | 계정 연결에 관해 해석할 점 |
+| --- | --- | --- |
+| `powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\start-alekov.ps1" -Port 5190` | `-Demo`, `-NoNativeHost`, `-NativeHostConfig`가 없는 **일반 실행**. 프로젝트 경로로 식별한 별도 사용자 개인 디렉터리에서 `prepare-native-host.ps1 -Create -ReuseExisting`을 통해 설정을 **생성하거나 기존 설정을 검사·재사용**한다. 정상 준비된 설정의 경로를 `--native-host-config`로 `src/server.mjs`에 전달한다. | 설정 파일 준비·전달이 가능할 뿐, **포털 로그인과 AI 앱 승인은 별도**다. 준비/검증 실패는 서버 시작 **중단**이며 미연결 모드로 자동 폴백하지 않는다. |
+| `npm start` | `package.json`의 `node src/server.mjs` 직접 실행. PowerShell 스크립트의 개인 설정 자동 준비를 **실행하지 않고**, Native Host CLI 설정 인자도 붙이지 않는다. | Native Host가 없는 서버의 `/api/native-login/*` POST 요청은 `NATIVE_HOST_DISABLED`가 될 수 있다. **이 상태는 위 일반 실행의 기본 동작과 다르다.** |
+| `powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\start-alekov.ps1" -NoNativeHost -Port 5190` | 명시적 `-NoNativeHost`로 **자동 준비 건너뜀**. Native Host 설정 경로를 서버로 넘기지 않는다. `-NativeHostConfig`와 함께 지정하면 스크립트가 오류로 중단한다. | Native Host 없는 상태이므로 해당 계정 연결 API의 `NATIVE_HOST_DISABLED`를 예상할 수 있다. **실제 실행·화면 검증은 미실시**. |
+| `-NativeHostConfig`에 운영자가 승인한 기존 설정 파일을 지정한 경우 | **자동 생성 대신** 전달된 정규 절대경로와 파일을 스크립트가 검사하여 `--native-host-config`로 넘긴다. | 해당 설정의 내용·개인 정보는 Git에 넣지 않으며, 승인·모델 호출 성공을 뜻하지 않는다. **이 프로젝트에서 해당 명시 옵션 실행은 미확인**. |
+
+`-Demo`를 지정하면 스크립트의 **Native Host 자동 준비 분기는 실행되지 않는다**. 예제 모드는 실제 사용자·엔진 연결 확인으로 보지 않는다. 일반 실행에서 준비 실패가 나오면 해당 메시지를 확인하고 담당자에게 문의하며, 프로젝트를 삭제하거나 `npm start`·`-NoNativeHost` 결과를 같은 연결 성공으로 기록하지 않는다.
+
+### 3.3 앱 시작 · 실제 확인
+
+기존에 접근한 포트 5190을 사용하며, **현재 PowerShell 위치는 `on-client`**여야 한다. 위 표의 **일반 실행**이 학생 PC에서 확인한 방식이다.
 
 ~~~powershell
 powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\start-alekov.ps1" -Port 5190
@@ -89,20 +102,20 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ".\tools\start-alekov.ps1" -
 끄려면 이 창에서 Ctrl+C 를 누르세요.
 ~~~
 
-스크립트는 Node/경로/포트 점유를 검사하고 `src/server.mjs`를 시작한 뒤 `http://127.0.0.1:5190/` HTTP 200을 확인한다. **[사용자 실행]** 실제 출력에 `계정 연결 준비가 끝났습니다. 앱에서 확인 번호로 로그인·승인을 진행하세요.`와 `참고: 지금 Node.js 는 v24.21.0 입니다. 수업 기준은 v24.19.0 입니다.`가 표시됐다. **Native Host 설정 준비≠계정 승인 성공**이고, 서버 HTTP 200도 실서비스 AI·SDP 성공을 증명하지 않는다.
+스크립트는 **일반 실행에서 Native Host 설정을 생성 또는 검증 후 재사용하고 `--native-host-config`로 전달**한 다음 Node/경로/포트 점유를 검사해 `src/server.mjs`를 시작하고 `http://127.0.0.1:5190/` HTTP 200을 확인한다. 자동 준비에 실패하면 서버를 시작하지 않는다. **[사용자 실행]** 실제 출력에 `계정 연결 준비가 끝났습니다. 앱에서 확인 번호로 로그인·승인을 진행하세요.`와 `참고: 지금 Node.js 는 v24.21.0 입니다. 수업 기준은 v24.19.0 입니다.`가 표시됐다. **Native Host 설정 준비≠계정 승인 성공**이고, 서버 HTTP 200도 실서비스 AI·SDP 성공을 증명하지 않는다.
 
 브라우저 주소창에서 **http://127.0.0.1:5190/** 을 열어 `보호 현황` / `업무 앱` / `보안 기록` 탭과 `다시 불러오기` 버튼을 확인한다. **[사용자 실행] 세 탭이 정상 표시되는 것을 확인했다.** 처음에 주소에 `?utm_source=chatgpt.com`이 붙은 상태에서는 `QUERY_REJECTED`가 보였고, 이후 기본 주소로 다시 열어 정상 화면을 확인했다. **추적 파라미터 없는 URL을 직접 입력**한다. `disconnected`·`unknown`·`demo`이면 연결 성공이나 안전 상태로 바꾸지 않는다.
 
 기본 실행 포트는 5189이며 5190이 점유된 경우 기존 프로그램을 종료하지 않는다. 빈 포트를 골라 `-Port 5191`처럼 새 포트를 지정할 수 있으나 **5191의 실제 재현은 미확인**이다. 포트를 바꾸면 브라우저 주소도 맞춘다.
 
-### 3.3 종료와 재실행
+### 3.4 종료와 재실행
 
 1. 위 서버를 실행한 **같은 PowerShell 창**에서 `Ctrl+C`로 종료한다(`-Background`는 사용하지 않음). **[사용자 실행] 수행함.**
 2. 브라우저에서 `http://127.0.0.1:5190/`을 새로고침해 `서버에 연결되지 않음`을 확인한다. **[사용자 실행] 확인함.**
-3. `on-client`에서 3.2의 실행 명령을 반복한 뒤 **추적 파라미터 없는 기본 주소**를 연다. **[사용자 실행] 재실행 후 세 탭이 다시 정상 표시되는 것을 확인함.** 재시작 콘솔 전문은 수집하지 않았다.
+3. `on-client`에서 3.3의 실행 명령을 반복한 뒤 **추적 파라미터 없는 기본 주소**를 연다. **[사용자 실행] 재실행 후 세 탭이 다시 정상 표시되는 것을 확인함.** 재시작 콘솔 전문은 수집하지 않았다.
 4. 시작·종료·다시 시작하기는 코드 및 학생 작성 파일을 삭제하는 작업이 아니다. 실패했다고 Git을 초기화하지 않는다.
 
-### 3.4 문법·회귀 테스트
+### 3.5 문법·회귀 테스트
 
 ~~~powershell
 node --check student/extension.mjs
@@ -205,6 +218,8 @@ Mermaid가 표시되지 않아도 이해할 수 있는 **동일한 텍스트 구
 | `...초 안에 뜨지 않았습니다` | 서버가 HTTP 200에 도달하지 못함. PowerShell 오류 출력 확인 | 서버 미확인 |
 | `NATIVE_LOGIN_STATUS_ONLY` / `NATIVE_LOGIN_PENDING` | 포털 승인 대기. 동일 계정·현재 확인 상태 점검. 6자리 번호 공개 금지 | 승인 미완료 |
 | `NATIVE_HOST_UNVERIFIED` / `NATIVE_LOGIN_SERVER_UNKNOWN` | Native Host/포털 결과 확인 불가. 안전한 코드만 담당자에 전달, 설정 재생성 금지 | 미확인(UNV) |
+| Native Host 개인 설정 자동 준비 실패 | 일반 `start-alekov.ps1` 실행은 **서버 시작 전에 중단**한다. 설정 파일을 임의 삭제하지 않고 오류 코드를 담당자에게 전달. `npm start` 또는 `-NoNativeHost`를 동일 동작의 대체 성공으로 기록하지 않음 | 자동 준비 실패, 서버 미시작 |
+| `NATIVE_HOST_DISABLED` | Native Host 설정 없이 시작된 서버에서 계정 연결 API를 요청했을 때 발생 가능(`npm start`, `-NoNativeHost` 등). 일반 스크립트 실행에서 이 결과가 기본값이라는 기존 설명은 **잘못됨** | 연결 설정 없는 실행; 실제 재현 미확인 |
 | `ON_AI_PROVISIONING_PENDING` / `WB_CLCO_AUTH_REQUIRED` | 계정 연결·AI 앱 승인·운영자 앱 권한 확인 | AI 연결 미확인 |
 | `WB_CLCO_RATE_LIMITED` / `WB_CLCO_TIMEOUT` / `WB_CLCO_NETWORK_ERROR` | 요청 제한/지연. 유료 요청을 연달아 반복하지 않음 | 조회 실패/대기 |
 | `ENGINE_NOT_CONNECTED` / `SUBJECT_SCOPE_UNVERIFIED` | 담당자가 준 SDP 호스트·학생/프로젝트 범위 확인. 임의 키 생성 금지 | 기존 원천 연결 미확인 |

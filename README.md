@@ -36,8 +36,8 @@ ARGOS는 기존 접속·XDR 사건 기록을 보여 주고, 별도 승인을 받
 ## 확인된 범위와 남은 조건
 
 - 17단계 당시 **별도** 모의 DOM 검사의 기록과 로컬 브라우저 초기 화면 관측은 과거 시점의 자료다. 현재 17~20단계 누적 `node --test`는 2026-10-23 학생 PC에서 **42/42 통과**했다. 이 수치는 실제 AI 호출 성공이 아니다.
-- 기본 실행(`start-alekov.ps1` 옵션 없음)에서 계정 연결 요청은 `NATIVE_HOST_DISABLED`를 반환. 이는 native host 기능을 지정하지 않은 기본 서버 실행 상태를 뜻합니다.
+- **Native Host 실행 방식 구분(현재 코드 기준):** `on-client`에서 옵션 없이 `tools/start-alekov.ps1`을 실행하면(`-Demo`, `-NoNativeHost`, `-NativeHostConfig`를 지정하지 않은 경우) 스크립트가 프로젝트별 **개인 Native Host 설정을 자동 생성하거나 검증 후 재사용**하고, 검증된 경로를 `--native-host-config` 인자로 서버에 전달한다. 자동 준비·검증이 실패하면 서버 시작을 **중단**하며, 연결 없는 모드로 조용히 전환하지 않는다. 반면 `npm start`는 `node src/server.mjs`만 실행해 **설정 자동 준비를 하지 않고** `--native-host-config`도 전달하지 않는다. `start-alekov.ps1 -NoNativeHost`는 자동 준비를 **건너뛰고** 해당 인자를 전달하지 않는 명시적 선택이며, `-NativeHostConfig`와 함께 쓸 수 없다. Native Host가 전달되지 않은 서버의 **계정 연결 API(`/api/native-login/*`)**는 `NATIVE_HOST_DISABLED`를 반환할 수 있다. 설정이 준비되어도 **사용자 로그인·앱 승인·실제 AI 연결 성공은 별도로 확인**해야 한다.
 - **미확인:** 현재 최종 소스에서 실서비스 SDP·AI·OSV 연결 및 `ai.explain` 실제 모델 응답, 원천 조치 효과. 모델 목록 점검은 사건 설명 생성과 다르다. 이 문서의 21단계 공식 판정은 아직 확인하지 않았다.
-- 실제 운영 연결은 관리자가 준비한 native host와 (사건 원천 검증을 위한) SDP host 설정에 의존할 수 있습니다. 설정·열쇠를 임의로 만들거나 Git에 추가하지 않습니다.
+- 자동 Native Host **개인 설정 준비**는 학생 PC 실행 스크립트의 기능이고, 실제 계정·앱 권한 승인 및 기존 SDP 원천 연동은 별도 조건이다. SDP 개인 설정은 운영자가 승인한 범위에서만 사용한다. 자동 준비된 개인 설정 파일이나 비밀값을 Git·채팅·문서에 포함하지 않는다.
 
 원본 계약: [AI 연결 안내](on-client/docs/AI_SETUP_GUIDE.md), [학생 실행 안내](on-client/docs/STUDENT_LAUNCH_GUIDE.md). 제공 서버·전송 모듈은 수정하지 않았습니다.
