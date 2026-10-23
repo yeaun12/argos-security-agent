@@ -47,7 +47,8 @@ test('student: demo, disconnected, unknown cannot assert real success',()=>{
   }
 });
 test('student: executed or unconfirmed action never shows explanation success',()=>{
-  for(const data of [{summary:'모의',executed:true},{summary:'모의',requiresHumanConfirmation:false}]){
+  const valid=sample().explanation.data;
+  for(const data of [{...valid,executed:true},{...valid,requiresHumanConfirmation:false}]){
     const el=view.renderExplanation(sample({data}));
     assert.equal(el.getAttribute('data-student-explanation-event'),null);
   }
