@@ -53,7 +53,7 @@ test('stage18: missing event prompts selecting a record; loading remains pending
 test('stage18: complete evidence, rules and current event must be bound',()=>{
   const result=show(eventA());
   assert.equal(marker(result),'incident-A');
-  for(const s of ['사건 ID: incident-A','AI 설명(참고용)','사건 A 모의 AI 해석','e-A1 — 비정상 요청 감지','e-A2 — 인증 실패 반복','r-A1 — 반복 인증 실패 탐지']) assert.match(result.textContent,new RegExp(s.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')));
+  for(const s of ['사건 ID: incident-A','AI 설명(참고용)','사건 A 모의 AI 해석','e-A1 — 비정상 요청 감지','e-A2 — 인증 실패 반복','r-A1 — 반복 인증 실패 탐지']) assert.ok(result.textContent.includes(s), 'expected: '+s);
 });
 test('stage18: unknown states appear individually, never assumed safe',()=>{
   const result=show(eventA());
