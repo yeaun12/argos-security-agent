@@ -125,6 +125,7 @@ flowchart LR
   A["AI 설명·권한 검증<br/>src/ai/service.mjs · src/ai/vault-service.mjs"]
   N["계정 연결<br/>src/connection/native-context.mjs"]
   G["CLCO AI 게이트<br/>운영 승인 필요"]
+  P["ALEPH 포털 승인 페이지<br/>운영 계정 확인 필요"]
   V["설치 패키지 검사<br/>src/vulnerabilities/project-scan.mjs"]
   L["운영자 지정 프로젝트<br/>package-lock.json · node_modules"]
   O["OSV API<br/>https://api.osv.dev/v1/querybatch"]
@@ -135,7 +136,7 @@ flowchart LR
   S --> A
   S --> N
   A -.->|앱 권한 승인 시| G
-  N -.->|계정·앱 승인 경계| G
+  N -.->|계정 로그인 승인 확인| P
   S --> V
   V -.->|운영자 지정 경로| L
   V -.->|허용된 공개 이름·버전만| O
