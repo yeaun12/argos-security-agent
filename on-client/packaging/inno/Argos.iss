@@ -29,4 +29,4 @@ Source: "{#BasicRoot}\PACKAGE_MANIFEST.json"; DestDir: "{app}"; Flags: ignorever
 
 [Icons]
 Name: "{group}\ARGOS (Demo only)"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\launcher\launch-argos.ps1"" -Demo"; WorkingDir: "{app}"; Comment: "Illustrative local demo; not a live security connection"
-Name: "{group}\ARGOS (Offline / disconnected)"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\launcher\launch-argos.ps1"""; WorkingDir: "{app}"; Comment: "No account or SDP credentials"
+Name: "{group}\ARGOS (Offline - disconnected)"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\launcher\launch-argos.ps1"""; WorkingDir: "{app}"; Comment: "No account or SDP credentials"

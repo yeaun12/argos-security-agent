@@ -30,9 +30,16 @@ test('launcher: local port, limited Node version, demo or disconnected only',()=
  assert.match(launch,/process\.Kill\(\)/);
 });
 test('Inno recipe: user scope, local app folder and dedicated demo shortcuts',()=>{
- for(const s of ['PrivilegesRequired=lowest','DefaultDirName={localappdata}\\Programs\\ARGOS','OutputBaseFilename=setup','ARGOS (Demo only)','ARGOS (Offline / disconnected)'])
+ for(const s of ['PrivilegesRequired=lowest','DefaultDirName={localappdata}\\Programs\\ARGOS','OutputBaseFilename=setup','ARGOS (Demo only)','ARGOS (Offline - disconnected)'])
   assert.ok(iss.includes(s),s);
  assert.doesNotMatch(iss,/PrivilegesRequired=admin|HKEY_LOCAL_MACHINE|sc\.exe|RegServer/);
+});
+test('Inno shortcut file names have no Windows path separators or illegal characters',()=>{
+ const names=[...iss.matchAll(/^Name:\s*"\{group\}\\([^"]+)"/gm)].map(match=>match[1]);
+ assert.equal(names.length,2,'exactly two per-user shortcuts');
+ for(const name of names) {
+   assert.doesNotMatch(name,/[\\\/:*?"<>|]/,'shortcut Name must be a single valid file name');
+ }
 });
 test('installer builder: verifies basic package before ISCC',()=>{
  for(const s of ['verify-package.ps1','ISCC.exe','/DBasicRoot=$basic','SETUP_SHA256','setup.exe'])

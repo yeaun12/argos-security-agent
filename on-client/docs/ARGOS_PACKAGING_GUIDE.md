@@ -58,7 +58,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ".\packaging\windows\build-i
 
 컴파일러가 자동 검색되지 않으면 `-IsccPath 'C:\설치된경로\ISCC.exe'`를 추가한다. 출력 위치는 `%USERPROFILE%\Documents\ARGOS-builds\installers\ARGOS-<UTC 생성시각>\setup.exe`이다. 표시된 `SETUP_FILE`과 `SETUP_SHA256`를 기록한다. **setup.exe 생성은 설치 성공과 다르다.**
 
-설치 설정: `PrivilegesRequired=lowest`, 기본 설치 경로 `%LOCALAPPDATA%\Programs\ARGOS`, 시작 메뉴에 `ARGOS (Demo only)`와 `ARGOS (Offline / disconnected)`를 추가한다. 관리자 서비스나 드라이버를 등록하지 않는다.
+설치 설정: `PrivilegesRequired=lowest`, 기본 설치 경로 `%LOCALAPPDATA%\Programs\ARGOS`, 시작 메뉴에 `ARGOS (Demo only)`와 `ARGOS (Offline - disconnected)`를 추가한다. 관리자 서비스나 드라이버를 등록하지 않는다.
 
 ## 4. 실제 설치 후 확인 순서 (실행 전)
 
@@ -66,7 +66,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ".\packaging\windows\build-i
 2. 사용자 시작 메뉴의 `ARGOS (Demo only)` 실행. 설치형 시작 주소는 `http://127.0.0.1:5196/`. 브라우저에 추적 쿼리 없이 접속.
 3. 세 탭 확인. Demo `library → allow` 및 `event-01`은 **제공 예제**, 실제 접근 판정/XDR 기록이 아니다. 사건 시각도 조회 실측 시각이 아니다.
 4. PowerShell 실행 창에서 `Ctrl+C`로 종료하고 `5196` 접속이 중단되는지 확인. 바로가기로 다시 실행해 재접속 확인.
-5. `ARGOS (Offline / disconnected)` 실행 시 연결 없음/확인 불가를 정확히 표시하는지 확인.
+5. `ARGOS (Offline - disconnected)` 실행 시 연결 없음/확인 불가를 정확히 표시하는지 확인.
 6. 사용자 단위 제거 프로그램으로 제거하고, 설치 **소유 파일만** 삭제되는지 확인. 원본 Workbench, 이전 제출 폴더, 개인 자격 보관소가 남아 있는지 확인.
 
 다른 앱이 `5196`을 사용 중이라면 강제로 종료하지 않는다. 새 PowerShell 창에서 아래처럼 다른 포트로 실행한다.
@@ -87,3 +87,10 @@ Node.js가 없거나 허용 버전 밖이면 실행이 중단된다. 설치 파�
 | **[실제 서비스 미확인]** | 실계정 SDP, 실제 XDR, 모델 추론, OSV 외부 조회, 실제 보안 조치 효과 |
 
 **설치 테스트가 완료된 경우에만** 정확한 포장 커밋 SHA, 테스트 실행 일시, 출력된 `SETUP_SHA256`, 설치·제거 결과를 별도로 작성한다.
+
+
+## 6. 2026-10-26 설치 바로가기 오류 수정
+
+**[사용자 PC 실측]** 첫 설치 파일 `setup.exe` SHA-256 `e711898b5f4fb8c2184ba39fa379571ff29059bc7b583aabfa7070e6dd01e8fd`로 실행한 설치 과정에서 `IPersistFile::Save failed; code 0x80070003`이 나타났다. 화면의 바로가기 경로는 `ARGOS (Offline \\ disconnected).lnk` 형태였다. `[Icons]`의 `ARGOS (Offline / disconnected)`가 경로 구분자로 해석된 것이 원인으로 판단된다.
+
+**[수정한 소스/아직 설치 미검증]** 바로가기 파일명을 `ARGOS (Offline - disconnected)`로 변경하고, 이름에 경로 구분자가 없는지 확인하는 자동 테스트를 추가했다. **이전 실패한 설치 파일은 재사용하지 않고** 업데이트한 포장 브랜치에서 새로운 기본 패키지와 새로운 `setup.exe`를 생성해야 한다. 오류 후 설치 마법사가 정상 취소/롤백되었는지 확인하고, 이전 설치 폴더가 남았다면 내용을 임의 삭제·덮어쓰지 말고 상태를 먼저 조사한다.
