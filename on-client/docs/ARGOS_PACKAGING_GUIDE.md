@@ -149,3 +149,13 @@ Node.js가 없거나 허용 버전 밖이면 실행이 중단된다. 설치 파�
 5. 사용자가 테스트 설치에 동의한 경우에만, 설치에서 체크박스를 미선택한 경우 바탕화면에 아이콘이 없는지, 체크한 경우 현재 사용자 바탕화면에 `ARGOS (Demo only).lnk`가 생기는지, 시작 메뉴 바로가기 두 개와 설치 제거 기능이 유지되는지 실제로 확인한다.
 
 **주의:** 바탕화면 바로가기의 추가는 설치 스크립트 UX 작업일 뿐, 네이티브 단독 실행 파일이나 별도 설치 없는 앱을 구현한 것은 아니다. Node.js 22~24 설치 전제, 코드 서명 부재, Demo/Offline 한정은 그대로다.
+
+
+## 10. 2026-10-26 사용자 PC: 선택형 바탕화면 바로가기 검증 기록
+
+- **[사용자 PC 실측]** 새 UX 브랜치 소스 `080f243e990a9b76e5f1302da6765cfafc7e8ee6`에서 `node --test` **63 tests / 63 pass / 0 fail / 243.3706ms**.
+- **[사용자 PC 실측]** Inno Setup 컴파일 성공, `ARGOS-Installer.exe` SHA-256 `d461a73bf57b75774302ae58711d758c8cbeb5758c07d3dab7f762d78ec37e09`, 출력 위치 `C:\Users\User\Documents\ARGOS-builds\installers\ARGOS-20261026-052745-339\ARGOS-Installer.exe`.
+- **[사용자 PC 실측]** 동일 설치 버전 소스 커밋 `080f243e990a9b76e5f1302da6765cfafc7e8ee6`, 설치 후 `Uninstaller=True` 및 `DemoStartMenu=True`. 첫 설치 시 선택하지 않은 바탕화면 아이콘은 `DemoDesktop=False`. 이것은 선택형·기본 해제 동작과 부합한다.
+- **[사용자 PC 실측]** 설치 마법사를 다시 실행하고 선택 항목을 확인한 뒤 사용자 Desktop에서 `Test-Path -LiteralPath (Join-Path $desktop 'ARGOS (Demo only).lnk')` 결과 **`True`**. 선택형 바탕화면 바로가기 **파일 생성 확인**.
+- **[미확인]** 마지막 데스크톱 바로가기를 더블클릭했을 때 실제 앱 구동/브라우저 표시 여부는 아직 확인되지 않았다. `True`는 바로가기 **파일 존재 증거**이지 동작 성공 증거는 아니다.
+- **[제약 유지]** Node.js 외부 설치 필요, 오프라인/예제 한정, 실제 SDP/XDR/AI 연동 및 실행 효과는 미검증. 설치본 변경과 GitHub 작업 브랜치 소스 관리는 구분한다.
