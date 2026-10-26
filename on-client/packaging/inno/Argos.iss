@@ -18,7 +18,7 @@ WizardStyle=modern
 Compression=lzma2
 SolidCompression=yes
 Uninstallable=yes
-OutputBaseFilename=setup
+OutputBaseFilename=ARGOS-Installer
 OutputDir=.
 SetupLogging=yes
 

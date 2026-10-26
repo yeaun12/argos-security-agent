@@ -50,9 +50,9 @@ Write-Host "COMPILING_SOURCE=$basic"
 Write-Host "COMPILER=$IsccPath"
 & $IsccPath "/DBasicRoot=$basic" "/O$output" $iss
 if ($LASTEXITCODE -ne 0) { throw "Inno Setup compilation failed with exit code $LASTEXITCODE." }
-$setup = Join-Path $output 'setup.exe'
+$setup = Join-Path $output 'ARGOS-Installer.exe'
 if (-not (Test-Path -LiteralPath $setup -PathType Leaf)) {
-  throw 'ISCC returned success but setup.exe was not found.'
+  throw 'ISCC returned success but ARGOS-Installer.exe was not found.'
 }
 $sha = (Get-FileHash -LiteralPath $setup -Algorithm SHA256).Hash.ToLowerInvariant()
 Write-Host "SETUP_FILE=$setup"

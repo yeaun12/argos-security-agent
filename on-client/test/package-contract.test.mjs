@@ -30,7 +30,7 @@ test('launcher: local port, limited Node version, demo or disconnected only',()=
  assert.match(launch,/process\.Kill\(\)/);
 });
 test('Inno recipe: user scope, local app folder and dedicated demo shortcuts',()=>{
- for(const s of ['PrivilegesRequired=lowest','DefaultDirName={localappdata}\\Programs\\ARGOS','OutputBaseFilename=setup','ARGOS (Demo only)','ARGOS (Offline - disconnected)'])
+ for(const s of ['PrivilegesRequired=lowest','DefaultDirName={localappdata}\\Programs\\ARGOS','OutputBaseFilename=ARGOS-Installer','ARGOS (Demo only)','ARGOS (Offline - disconnected)'])
   assert.ok(iss.includes(s),s);
  assert.doesNotMatch(iss,/PrivilegesRequired=admin|HKEY_LOCAL_MACHINE|sc\.exe|RegServer/);
 });
@@ -41,8 +41,14 @@ test('Inno shortcut file names have no Windows path separators or illegal charac
    assert.doesNotMatch(name,/[\\\/:*?"<>|]/,'shortcut Name must be a single valid file name');
  }
 });
+test('installer filename avoids setup.exe compatibility DLL preload warning',()=>{
+ assert.match(iss,/^OutputBaseFilename=ARGOS-Installer$/m);
+ assert.doesNotMatch(iss,/^OutputBaseFilename=setup$/mi);
+ assert.match(compile,/Join-Path \$output 'ARGOS-Installer\.exe'/);
+ assert.doesNotMatch(compile,/Join-Path \$output 'setup\.exe'/);
+});
 test('installer builder: verifies basic package before ISCC',()=>{
- for(const s of ['verify-package.ps1','ISCC.exe','/DBasicRoot=$basic','SETUP_SHA256','setup.exe'])
+ for(const s of ['verify-package.ps1','ISCC.exe','/DBasicRoot=$basic','SETUP_SHA256','ARGOS-Installer.exe'])
   assert.ok(compile.includes(s),s);
  assert.doesNotMatch(compile,/Remove-Item|git reset|git clean/);
 });

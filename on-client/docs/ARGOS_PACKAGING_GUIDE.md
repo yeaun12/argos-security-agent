@@ -48,7 +48,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File ".\packaging\verify-package.
 
 파일 해시는 우발적 변경 탐지용이며 출처 인증이나 코드 서명을 대신하지 않는다. `.env`, `node_modules`, 개인 Native Host/SDP 설정과 비밀 정보가 포함되지 않았는지 확인한다.
 
-## 3. Inno Setup 사용자 단위 setup.exe
+## 3. Inno Setup 사용자 단위 ARGOS-Installer.exe
 
 Inno Setup 6의 `ISCC.exe`를 PC에 준비한다. 아래 빌드 도구는 기본 포장의 해시와 필수 파일을 먼저 검증한 뒤 컴파일한다.
 
@@ -56,13 +56,13 @@ Inno Setup 6의 `ISCC.exe`를 PC에 준비한다. 아래 빌드 도구는 기본
 powershell -NoProfile -ExecutionPolicy Bypass -File ".\packaging\windows\build-installer.ps1" -BasicRoot $basicRoot
 ~~~
 
-컴파일러가 자동 검색되지 않으면 `-IsccPath 'C:\설치된경로\ISCC.exe'`를 추가한다. 출력 위치는 `%USERPROFILE%\Documents\ARGOS-builds\installers\ARGOS-<UTC 생성시각>\setup.exe`이다. 표시된 `SETUP_FILE`과 `SETUP_SHA256`를 기록한다. **setup.exe 생성은 설치 성공과 다르다.**
+컴파일러가 자동 검색되지 않으면 `-IsccPath 'C:\설치된경로\ISCC.exe'`를 추가한다. 출력 위치는 `%USERPROFILE%\Documents\ARGOS-builds\installers\ARGOS-<UTC 생성시각>\ARGOS-Installer.exe`이다. 표시된 `SETUP_FILE`과 `SETUP_SHA256`를 기록한다. **ARGOS-Installer.exe 생성은 설치 성공과 다르다.**
 
 설치 설정: `PrivilegesRequired=lowest`, 기본 설치 경로 `%LOCALAPPDATA%\Programs\ARGOS`, 시작 메뉴에 `ARGOS (Demo only)`와 `ARGOS (Offline - disconnected)`를 추가한다. 관리자 서비스나 드라이버를 등록하지 않는다.
 
 ## 4. 실제 설치 후 확인 순서 (실행 전)
 
-1. `setup.exe` 실행 후 사용자 설치(관리자 권한 상승 없음) 여부 확인.
+1. 검증한 `ARGOS-Installer.exe` 실행 후 사용자 설치(관리자 권한 상승 없음) 여부 확인.
 2. 사용자 시작 메뉴의 `ARGOS (Demo only)` 실행. 설치형 시작 주소는 `http://127.0.0.1:5196/`. 브라우저에 추적 쿼리 없이 접속.
 3. 세 탭 확인. Demo `library → allow` 및 `event-01`은 **제공 예제**, 실제 접근 판정/XDR 기록이 아니다. 사건 시각도 조회 실측 시각이 아니다.
 4. PowerShell 실행 창에서 `Ctrl+C`로 종료하고 `5196` 접속이 중단되는지 확인. 바로가기로 다시 실행해 재접속 확인.
@@ -93,4 +93,13 @@ Node.js가 없거나 허용 버전 밖이면 실행이 중단된다. 설치 파�
 
 **[사용자 PC 실측]** 첫 설치 파일 `setup.exe` SHA-256 `e711898b5f4fb8c2184ba39fa379571ff29059bc7b583aabfa7070e6dd01e8fd`로 실행한 설치 과정에서 `IPersistFile::Save failed; code 0x80070003`이 나타났다. 화면의 바로가기 경로는 `ARGOS (Offline \\ disconnected).lnk` 형태였다. `[Icons]`의 `ARGOS (Offline / disconnected)`가 경로 구분자로 해석된 것이 원인으로 판단된다.
 
-**[수정한 소스/아직 설치 미검증]** 바로가기 파일명을 `ARGOS (Offline - disconnected)`로 변경하고, 이름에 경로 구분자가 없는지 확인하는 자동 테스트를 추가했다. **이전 실패한 설치 파일은 재사용하지 않고** 업데이트한 포장 브랜치에서 새로운 기본 패키지와 새로운 `setup.exe`를 생성해야 한다. 오류 후 설치 마법사가 정상 취소/롤백되었는지 확인하고, 이전 설치 폴더가 남았다면 내용을 임의 삭제·덮어쓰지 말고 상태를 먼저 조사한다.
+**[수정한 소스/아직 설치 미검증]** 바로가기 파일명을 `ARGOS (Offline - disconnected)`로 변경하고, 이름에 경로 구분자가 없는지 확인하는 자동 테스트를 추가했다. **이전 실패한 설치 파일은 재사용하지 않고** 업데이트한 포장 브랜치에서 새로운 기본 패키지와 새로운 `ARGOS-Installer.exe`를 생성해야 한다. 오류 후 설치 마법사가 정상 취소/롤백되었는지 확인하고, 이전 설치 폴더가 남았다면 내용을 임의 삭제·덮어쓰지 말고 상태를 먼저 조사한다.
+
+
+## 7. 2026-10-26 Inno Setup 컴파일 보안 경고 및 수정
+
+**[사용자 PC 실측]** 바로가기 이름 수정 버전인 이전 커밋 `326d8b5fbe51651083b32a65b1650f357bb3463f`에서 Inno Setup 컴파일은 성공했으며, 출력은 `setup.exe` (SHA-256 `a643caf904bf80bd6915f64847d2ecc3a50ec72946ff898ce297d6c358c722e6`)였다. 다만 Inno Setup이 `OutputBaseFileName=setup` 사용에 대해, Windows 호환성 shim의 추가 DLL 로딩으로 인한 안전하지 않은 로딩 위험 경고를 출력했다. **컴파일 성공과 설치 안전성·설치 성공은 별개이며, 이 파일은 실행하지 않는다.** 이전 설치 파일의 제거/롤백 완료 여부 역시 아직 사용자 결과를 받지 못했다.
+
+**[소스 수정/사용자 PC 실행 전]** `packaging/inno/Argos.iss`의 출력 파일 이름을 `ARGOS-Installer`로 변경했고, 컴파일 검증기는 `ARGOS-Installer.exe`만 찾도록 수정했다. 자동 테스트에 `setup.exe` 출력명 회귀 방지 검사를 추가했다. 기존 `setup.exe`를 파일명만 바꾸어 재사용하는 대신 **수정 커밋으로 새 기본 패키지와 설치 실행 파일을 다시 빌드**한다. 새 설치 파일도 코드 서명 전이며, 파일명 수정만으로 다른 설치 보안 위험까지 해소된 것은 아니다.
+
+참고: Inno Setup 공식 문서 [OutputBaseFilename](https://jrsoftware.org/ishelp/topic_setup_outputbasefilename.htm).
