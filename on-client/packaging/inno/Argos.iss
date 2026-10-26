@@ -28,7 +28,7 @@ Source: "{#BasicRoot}\launcher\launch-argos.ps1"; DestDir: "{app}\launcher"; Fla
 Source: "{#BasicRoot}\PACKAGE_MANIFEST.json"; DestDir: "{app}"; Flags: ignoreversion
 
 [Tasks]
-Name: "desktopdemo"; Description: "Create an ARGOS Demo desktop shortcut (example data only)"; GroupDescription: "Optional shortcuts:"; Flags: unchecked
+Name: desktopdemo; Description: "Create an ARGOS Demo desktop shortcut (example data only)"; GroupDescription: "Optional shortcuts:"; Flags: unchecked
 
 [Icons]
 Name: "{group}\ARGOS (Demo only)"; Filename: "{sys}\WindowsPowerShell\v1.0\powershell.exe"; Parameters: "-NoProfile -ExecutionPolicy Bypass -File ""{app}\launcher\launch-argos.ps1"" -Demo"; WorkingDir: "{app}"; Comment: "Illustrative local demo; not a live security connection"

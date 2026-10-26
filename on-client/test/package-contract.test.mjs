@@ -43,7 +43,7 @@ test('Inno shortcut file names have no Windows path separators or illegal charac
 });
 test('desktop shortcut is opt-in, demo-only and current-user scoped',()=>{
  assert.match(iss,/^\[Tasks\]$/m);
- assert.match(iss,/^Name: "desktopdemo";.*Flags: unchecked$/m);
+ assert.match(iss,/^Name: desktopdemo;.*Flags: unchecked$/m);
  const desktop=[...iss.matchAll(/^Name: "\{userdesktop\}\\([^"]+)";(.*)$/gm)];
  assert.equal(desktop.length,1,'one optional desktop icon only');
  assert.equal(desktop[0][1],'ARGOS (Demo only)');
