@@ -73,12 +73,12 @@ foreach ($relative in $approvedPaths) {
     if ($parent.Attributes -band [IO.FileAttributes]::ReparsePoint) { throw "Reparse directory rejected: $relative" }
     if ($parent.FullName.Equals($appRoot,[StringComparison]::OrdinalIgnoreCase)) { break }
   }
-  $outputFile = Join-Path $destination ($relative.Replace('/','\'))
+  $outputFile = Join-Path (Join-Path $destination 'app') ($relative.Replace('/','\'))
   $outputDir = Split-Path -Parent $outputFile
   New-Item -ItemType Directory -Path $outputDir -Force | Out-Null
   Copy-Item -LiteralPath $inputFile -Destination $outputFile -ErrorAction Stop
   $digest = (Get-FileHash -LiteralPath $outputFile -Algorithm SHA256).Hash.ToLowerInvariant()
-  $records += [pscustomobject]@{path=$relative;sha256=$digest}
+  $records += [pscustomobject]@{path=('app/' + $relative);sha256=$digest}
 }
 
 $launcherSource = Join-Path $appRoot 'packaging\windows\launch-argos.ps1'
