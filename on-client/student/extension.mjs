@@ -184,6 +184,7 @@ export function createStudentView() {
       }
 
       addText(root, 'p', '제공받은 본인 최근 기록(최대 40건)만 표시합니다. 전체 감사 로그나 실시간 위협 탐지 결과가 아닙니다.');
+      addText(root, 'p', '정렬 기준: 사건 발생 시각(event.at) 최신순(UTC). 조회 확인 시각은 학생 기록 입력에 전달되지 않아 확인 불가이며, 사건 시각을 조회 시각이라고 표시하지 않습니다.');
       const sorted = [...data].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
       const filters = document.createElement('div');
       root.append(filters);
@@ -237,7 +238,17 @@ export function createStudentView() {
         list.replaceChildren();
         if (visible.length === 0) addText(list, 'li', '선택한 조건에 맞는 기록이 없습니다.');
         let focusButton = null;
+        let lastUtcDay = null;
         for (const event of visible) {
+          const eventTime = Date.parse(event.at);
+          const utcDay = Number.isFinite(eventTime) ? new Date(eventTime).toISOString().slice(0, 10) : '시각 확인 불가';
+          if (utcDay !== lastUtcDay) {
+            const dateGroup = document.createElement('li');
+            dateGroup.setAttribute('data-student-date-group', utcDay);
+            dateGroup.textContent = `사건 발생일(UTC): ${utcDay}`;
+            list.append(dateGroup);
+            lastUtcDay = utcDay;
+          }
           const item = document.createElement('li');
           item.setAttribute('data-student-event-id', event.id);
           addText(item, 'p', `사건 ID: ${event.id} · 시각: ${event.at} · 종류: ${kindNames[event.kind] || '확인 불가'}(${event.kind}) · 앱: ${event.appId ?? '앱을 확인할 수 없음'}`);
@@ -312,6 +323,7 @@ export function createStudentView() {
       if (mode === 'demo') addText(root, 'p', '예제 자료(demo) · 실제 연결 상태가 아닙니다.');
       else if (mode === 'disconnected') addText(root, 'p', '연결 없음(disconnected)');
       else if (mode === 'unknown') addText(root, 'p', '연결 상태 확인 불가(unknown)');
+      addText(root, 'p', '자료별 상태를 분리해 표시합니다. 연결 없음·확인 불가는 보안 정상 판정이 아닙니다.');
 
       const renderCollection = (title, resource, emptyText, description) => {
         const section = document.createElement('section');
@@ -354,8 +366,10 @@ export function createStudentView() {
 
       const alerts = document.createElement('section');
       addText(alerts, 'h3', '주의 알림');
-      if (!Array.isArray(notifications) || notifications.length === 0) {
-        addText(alerts, 'p', '주의할 알림이 없습니다.');
+      if (!Array.isArray(notifications)) {
+        addText(alerts, 'p', '주의 알림 자료 확인 불가. 알림이 없다는 뜻이 아닙니다.');
+      } else if (notifications.length === 0) {
+        addText(alerts, 'p', '표시할 주의 알림 0건입니다. 이것만으로 전체 보안 상태가 안전하다고 판단하지 않습니다.');
       } else {
         const list = document.createElement('ul');
         for (const notice of notifications) {
@@ -717,10 +731,12 @@ export function createStudentView() {
         return root;
       }
       if (status === 'loading') {
+        add('p', '선택한 사건 ID: ' + (identifier(event.id) ? event.id : '확인 불가'));
         add('p', '선택한 사건의 AI 설명 요청 중입니다. 아직 성공하지 않았습니다.');
         return root;
       }
       if (status !== 'ok') {
+        add('p', '선택한 사건 ID: ' + (identifier(event.id) ? event.id : '확인 불가'));
         add('p', 'AI 사건 설명 요청 전입니다. 기록의 AI 설명 기능으로 직접 요청하세요.');
         return root;
       }
@@ -809,6 +825,7 @@ export function createStudentView() {
         add('p', '설명 확인 시각: ' + checkedAt);
       }
       add('p', 'AI 설명은 참고 정보입니다. 실제 사실 판단은 인용한 근거와 원천 시스템의 현재 상태를 기준으로 하세요.');
+      add('p', 'AI 설명은 접근 허용·차단의 정책 판정이나 조치 효과의 독립적인 증거가 아니며, 보안 조치를 자동 집행하지 않습니다.');
       return root;
     },
     renderAction({ status = 'idle', event = null, actionId = null, target = null,
