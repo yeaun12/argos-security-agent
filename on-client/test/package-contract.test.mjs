@@ -41,6 +41,18 @@ test('Inno shortcut file names have no Windows path separators or illegal charac
    assert.doesNotMatch(name,/[\\\/:*?"<>|]/,'shortcut Name must be a single valid file name');
  }
 });
+test('desktop shortcut is opt-in, demo-only and current-user scoped',()=>{
+ assert.match(iss,/^\[Tasks\]$/m);
+ assert.match(iss,/^Name: "desktopdemo";.*Flags: unchecked$/m);
+ const desktop=[...iss.matchAll(/^Name: "\{userdesktop\}\\([^"]+)";(.*)$/gm)];
+ assert.equal(desktop.length,1,'one optional desktop icon only');
+ assert.equal(desktop[0][1],'ARGOS (Demo only)');
+ assert.match(desktop[0][2],/Tasks: desktopdemo/);
+ assert.match(desktop[0][2],/ -Demo"/);
+ assert.doesNotMatch(desktop[0][1],/[\\\/:*?"<>|]/,'desktop shortcut name must be safe');
+ assert.doesNotMatch(iss,/Name: "\{commondesktop\}|Name: "\{userstartup\}|Name: "\{commonstartup\}/);
+});
+
 test('installer filename avoids setup.exe compatibility DLL preload warning',()=>{
  assert.match(iss,/^OutputBaseFilename=ARGOS-Installer$/m);
  assert.doesNotMatch(iss,/^OutputBaseFilename=setup$/mi);
