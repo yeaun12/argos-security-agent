@@ -207,3 +207,47 @@ main:focus { outline: none; }
 .state-ok { background: var(--allow-soft); color: var(--allow); }
 .ai-result[data-state="connected"] { border-left: 3px solid var(--allow); padding-left: 12px; }
 .ai-result[data-state="unknown"] { border-left: 3px solid var(--unknown); padding-left: 12px; }
+
+
+
+/* 총공세 4일차: 기록 → PC 실측 → 주의 알림 우선 이동, 키보드 접근 지원 */
+.quick-overview { margin-bottom: 20px; border-top: 4px solid var(--accent); }
+.quick-overview h1 { margin-bottom: 6px; }
+.quick-overview > .muted { margin-top: 0; }
+.quick-actions { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 12px; }
+.quick-action {
+  display: flex; flex-direction: column; align-items: flex-start; justify-content: center;
+  text-align: left; gap: 6px; min-width: 0; min-height: 88px; padding: 14px;
+  border: 1px solid var(--border); border-radius: var(--radius);
+  color: var(--text); background: var(--surface); cursor: pointer; font: inherit;
+}
+.quick-action strong { font-size: 1rem; color: var(--accent); }
+.quick-action span { font-size: 0.85rem; color: var(--muted); }
+.quick-action:hover { border-color: var(--accent); background: var(--accent-soft); }
+.read-failure {
+  margin: 10px 0 14px; padding: 12px 14px; border: 1px solid var(--deny);
+  border-left: 4px solid var(--deny); border-radius: var(--radius);
+  background: var(--deny-soft); color: var(--deny);
+}
+.read-failure p { margin: 6px 0 0; }
+#pc-env-history { max-height: 320px; overflow: auto; }
+#pc-env-history li { padding: 6px 0; border-bottom: 1px solid var(--border); overflow-wrap: anywhere; }
+#pc-env-network, #pc-env-firewall, #pc-env-events, #pc-env-sdp { overflow-wrap: anywhere; }
+@media (max-width: 900px) {
+  body { min-width: 320px; }
+  .topbar { min-height: 60px; height: auto; gap: 10px; flex-wrap: wrap; padding: 12px 16px; }
+  .topbar-status { flex-wrap: wrap; }
+  .layout { grid-template-columns: minmax(0,1fr); }
+  .sidebar { border-right: 0; border-bottom: 1px solid var(--border); padding: 8px; }
+  #nav { flex-direction: row; flex-wrap: wrap; }
+  .sidebar-note { display: none; }
+  main { padding: 16px; min-width: 0; }
+  .grid-2, .quick-actions { grid-template-columns: minmax(0,1fr); }
+  .grid-2 > .card { margin-bottom: 16px; }
+  .identity, .kv { grid-template-columns: 110px minmax(0,1fr); }
+}
+@media (max-width: 420px) {
+  .identity, .kv { grid-template-columns: minmax(0,1fr); gap: 3px; }
+  .identity dt, .kv dt { font-weight: 600; }
+  .identity dd, .kv dd { margin-bottom: 8px; }
+}

@@ -706,6 +706,32 @@ function renderSessions() {
 }
 
 
+
+// 조회 실패는 숨기거나 성공값으로 대체하지 않는다. 서버 원문 오류는 화면에 노출하지 않는다.
+function setReadFailure(id,items,action){
+ const box=$(id);
+ box.replaceChildren();
+ box.hidden=items.length===0;
+ if(!items.length)return;
+ const title=document.createElement('strong');
+ title.textContent='확인하지 못한 항목: '+items.join(', ');
+ const advice=document.createElement('p');
+ advice.textContent=action;
+ box.append(title,advice);
+}
+function setupQuickActions(){
+ for(const button of document.querySelectorAll('[data-quick-view][data-quick-target]')){
+  button.addEventListener('click',()=>{
+   const view=button.dataset.quickView,target=$(button.dataset.quickTarget);
+   if(!target||!['protection','records'].includes(view))return;
+   selectView(view);
+   target.tabIndex=-1;
+   target.focus();
+   target.scrollIntoView({block:'start',behavior:'auto'});
+  });
+ }
+}
+
 // ---------- 총공세 2일차 · 로컬 Windows 실측 ----------
 let lastPcMeasurement=null, pcMeasurementGeneration=0;
 const PC_REASONS={
@@ -735,6 +761,7 @@ function pcText(kind,v){
  return v.drive+' 남은 공간 '+v.freeGiB.toFixed(2)+' GiB / 전체 '+v.totalGiB.toFixed(2)+' GiB'+time;
 }
 function pcClear(){
+ setReadFailure('pc-metrics-alert',[],'');
  for(const id of ['pc-cpu-value','pc-memory-value','pc-disk-value'])$(id).textContent='확인 불가 · 현재 결과 없음';
  $('pc-metrics-change').textContent='현재 측정을 확인하지 못해 직전 비교를 표시하지 않습니다.';
 }
@@ -753,7 +780,9 @@ function pcRender(data){
   changes.append(p);
  }
  lastPcMeasurement=data;
- const missing=list.filter(([kind])=>data[kind].status!=='ok').length;
+ const failures=list.filter(([kind])=>data[kind].status!=='ok').map(([, ,label])=>label);
+ setReadFailure('pc-metrics-alert',failures,'Windows 조회 권한과 실행 상태를 확인하고 「PC 상태 다시 측정」을 누르세요. 계속 실패하면 관리자에게 문의하세요.');
+ const missing=failures.length;
  $('pc-metrics-status').textContent='로컬 PC 실측 (보안 Demo와 별개) · '
   +(missing?missing+'개 항목 확인 불가':'CPU·메모리·디스크 조회 완료')+' · 자동 외부 전송 없음';
 }
@@ -766,13 +795,16 @@ async function loadPcMetrics(){
   const data=response.data;
   if(!response.ok||!data||!['windows-cim','not-supported'].includes(data.source)
     ||!['cpu','memory','disk'].every(kind=>pcValid(kind,data[kind]))){
-   $('pc-metrics-status').textContent='확인 불가 · '
-    +(response.ok?'측정 응답이 올바르지 않습니다.':response.error.message);
+   $('pc-metrics-status').textContent='확인 불가 · PC 측정 요청이 실패했습니다.';
+   setReadFailure('pc-metrics-alert',['CPU·메모리·디스크 조회'],'서버 실행 상태를 확인하고 「PC 상태 다시 측정」을 다시 누르세요. 원인이 계속되면 관리자에게 문의하세요.');
    return;
   }
   pcRender(data);
  }catch{
-  if(gen===pcMeasurementGeneration)$('pc-metrics-status').textContent='확인 불가 · PC 상태 조회 중 오류가 발생했습니다.';
+  if(gen===pcMeasurementGeneration){
+   $('pc-metrics-status').textContent='확인 불가 · PC 상태 조회 중 오류가 발생했습니다.';
+   setReadFailure('pc-metrics-alert',['CPU·메모리·디스크 조회'],'서버가 실행 중인지 확인하고 「PC 상태 다시 측정」을 다시 누르세요.');
+  }
  }finally{if(gen===pcMeasurementGeneration)button.disabled=false}
 }
 
@@ -850,6 +882,7 @@ function addPcEnvironmentHistory(data){
  renderPcEnvironmentHistory();
 }
 function clearPcEnvironmentCurrent(){
+ setReadFailure('pc-env-alert',[],'');
  for(const id of ['pc-env-network','pc-env-firewall','pc-env-events'])$(id).textContent='확인 불가 · 현재 조회 전';
  $('pc-env-sdp').textContent='확인 불가 · SDP 연결 확인 전';
 }
@@ -868,16 +901,26 @@ async function loadPcEnvironment(){
     &&((data.sdp.status==='disconnected'&&['DEMO_MODE','SDP_NOT_CONFIGURED'].includes(data.sdp.reason))
       ||(data.sdp.status==='unknown'&&data.sdp.reason==='SDP_CONNECTION_UNVERIFIED'));
   if(!valid){
-   $('pc-env-status').textContent='확인 불가 · '+(response.ok?'조회 데이터가 계약과 일치하지 않습니다.':response.error.message);
+   $('pc-env-status').textContent='확인 불가 · PC 환경 조회 응답을 확인하지 못했습니다.';
+   setReadFailure('pc-env-alert',['네트워크·방화벽·이벤트 조회'],'서버 실행과 Windows 조회 권한을 확인한 뒤 「PC 환경 다시 조회」를 누르세요.');
    return;
   }
   for(const [part,id] of [['network','pc-env-network'],['firewall','pc-env-firewall'],['events','pc-env-events']])
     $(id).textContent=pcEnvironmentText(part,data[part]);
   $('pc-env-sdp').textContent=SDP_REASONS[data.sdp.reason];
-  $('pc-env-status').textContent='읽기 전용 조회 완료 · Windows 값과 SDP 연결 상태는 별도 · 결과 자동 외부 전송 없음';
+  const failures=[];
+  if(data.network.status==='unavailable')failures.push('네트워크');
+  if(data.firewall.status==='unavailable')failures.push('방화벽');
+  if(data.events.status==='unavailable')failures.push('Windows 이벤트');
+  else for(const log of data.events.logs)if(log.status==='unavailable')failures.push(log.name+' 이벤트');
+  setReadFailure('pc-env-alert',failures,'Windows 조회 권한과 이벤트 로그 접근을 확인한 후 「PC 환경 다시 조회」를 누르세요. 설정을 변경하거나 예시 값으로 채우지 마세요.');
+  $('pc-env-status').textContent=(failures.length?'일부 항목 확인 불가':'읽기 전용 조회 완료')+' · Windows 값과 SDP 연결 상태는 별도 · 결과 자동 외부 전송 없음';
   addPcEnvironmentHistory(data);
  }catch{
-  if(gen===pcEnvironmentGeneration)$('pc-env-status').textContent='확인 불가 · 로컬 환경 조회 중 오류';
+  if(gen===pcEnvironmentGeneration){
+   $('pc-env-status').textContent='확인 불가 · 로컬 환경 조회 중 오류';
+   setReadFailure('pc-env-alert',['네트워크·방화벽·이벤트 조회'],'서버가 실행 중인지 확인하고 「PC 환경 다시 조회」를 누르세요.');
+  }
  }finally{if(gen===pcEnvironmentGeneration)button.disabled=false;}
 }
 
@@ -1506,6 +1549,7 @@ async function loadAll() {
 
 function init() {
   setupNav();
+  setupQuickActions();
   $('refresh').addEventListener('click', () => { loadAll(); loadPcMetrics(); loadPcEnvironment(); });
   $('pc-env-load').addEventListener('click', () => loadPcEnvironment());
   $('pc-env-filter').addEventListener('change', () => renderPcEnvironmentHistory());

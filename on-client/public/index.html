@@ -43,6 +43,22 @@
         제공 코드는 학생 성취로 계산되지 않으며, 예제(demo)·연결 없음 상태는 실제 연결 성공이 아닙니다.
       </p>
 
+      <section class="card quick-overview" aria-labelledby="quick-overview-title">
+        <h1 id="quick-overview-title">ARGOS 주요 기능</h1>
+        <p class="muted">먼저 기록을 살피고, Windows PC 실측값을 확인한 뒤 주의 알림을 검토합니다. 예제 보안 데이터는 실측값이 아닙니다.</p>
+        <div class="quick-actions" role="group" aria-label="핵심 기능 바로가기">
+          <button type="button" class="quick-action" data-quick-view="records" data-quick-target="records-title">
+            <strong>1 · 기록 보기</strong><span>접속·XDR 기록과 조회 시각 확인</span>
+          </button>
+          <button type="button" class="quick-action" data-quick-view="protection" data-quick-target="pc-metrics-title">
+            <strong>2 · 내 PC 상태</strong><span>CPU·메모리·디스크 로컬 실측</span>
+          </button>
+          <button type="button" class="quick-action" data-quick-view="protection" data-quick-target="student-status-title">
+            <strong>3 · 위험 알림</strong><span>전달된 주의 알림·확인 불가 구분</span>
+          </button>
+        </div>
+      </section>
+
       <section id="view-protection" class="view" role="tabpanel" aria-labelledby="tab-protection">
         <h1>보호 현황</h1>
 
@@ -79,6 +95,7 @@
           <p class="muted">이 앱 서버가 실행 중인 Windows PC의 자원입니다. 보안 Demo와 별개이며 악성코드 검사나 위험 판정이 아닙니다.</p>
           <div class="row"><button type="button" class="btn" id="pc-metrics-load">PC 상태 다시 측정</button></div>
           <p class="muted" id="pc-metrics-status" role="status" aria-live="polite">측정 전</p>
+          <div class="read-failure" id="pc-metrics-alert" role="alert" hidden></div>
           <dl class="identity">
             <dt>CPU 사용률</dt><dd id="pc-cpu-value">측정 전</dd>
             <dt>메모리 사용량</dt><dd id="pc-memory-value">측정 전</dd>
@@ -93,6 +110,7 @@
           <p class="muted">Windows PC의 최근 24시간 이벤트를 조회합니다. 경고·오류 건수는 침해 또는 공격 탐지 결과가 아닙니다. 보안 설정은 변경하지 않습니다.</p>
           <div class="row"><button type="button" class="btn" id="pc-env-load">PC 환경 다시 조회</button></div>
           <p id="pc-env-status" class="muted" role="status" aria-live="polite">조회 전</p>
+          <div class="read-failure" id="pc-env-alert" role="alert" hidden></div>
           <dl class="identity">
             <dt>네트워크</dt><dd id="pc-env-network">조회 전</dd>
             <dt>Windows 방화벽</dt><dd id="pc-env-firewall">조회 전</dd>

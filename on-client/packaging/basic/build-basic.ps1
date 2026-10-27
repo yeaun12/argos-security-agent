@@ -44,6 +44,8 @@ $approvedPaths = @(
   'src/connection/native-context.mjs',
   'src/connection/native-login.mjs',
   'src/engine.mjs',
+  'src/pc-metrics.mjs',
+  'src/pc-environment.mjs',
   'src/engine/sdp-host-config.mjs',
   'src/engine/sdp-host.mjs',
   'src/learner-support/service.mjs',
