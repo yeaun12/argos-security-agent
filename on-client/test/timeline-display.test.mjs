@@ -76,3 +76,46 @@ test('loading/errors/empty do not retain old event details',()=>{
   assert.doesNotMatch(fresh.textContent,/모의 사건 new/);
  }
 });
+
+
+test('UX: status summary follows active filters', () => {
+ const root = view.renderEvents({
+   status: 'ok', mode: 'demo', data: rows()
+ });
+ const summary = tagged(root, 'data-argos-status-summary')[0];
+ assert.ok(summary);
+ assert.match(summary.textContent, /허용 1건/);
+ assert.match(summary.textContent, /거부 2건/);
+ change(root, '접속 상태', 'denied');
+ assert.match(summary.textContent, /허용 0건/);
+ assert.match(summary.textContent, /거부 2건/);
+});
+
+test('UX: reset restores all filter selections', () => {
+ const root = view.renderEvents({
+   status: 'ok', mode: 'demo', data: rows()
+ });
+ change(root, '기록 종류', 'xdr');
+ change(root, '접속 상태', 'denied');
+ assert.deepEqual(ids(root), ['new']);
+
+ const reset = tagged(root, 'data-argos-filter-reset')[0];
+ assert.ok(reset);
+ reset.dispatch('click');
+ assert.deepEqual(ids(root), ['new', 'middle', 'old']);
+});
+
+test('UX: identical timestamps preserve input order', () => {
+ const data = [
+   event('same-a', '2026-10-22T03:00:00Z',
+     'access', 'library', 'allowed'),
+   event('same-b', '2026-10-22T03:00:00Z',
+     'xdr', 'library', 'denied'),
+ ];
+ const before = JSON.stringify(data);
+ const root = view.renderEvents({
+   status: 'ok', mode: 'demo', data
+ });
+ assert.deepEqual(ids(root), ['same-a', 'same-b']);
+ assert.equal(JSON.stringify(data), before);
+});

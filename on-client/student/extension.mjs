@@ -185,7 +185,12 @@ export function createStudentView() {
 
       addText(root, 'p', '제공받은 본인 최근 기록(최대 40건)만 표시합니다. 전체 감사 로그나 실시간 위협 탐지 결과가 아닙니다.');
       addText(root, 'p', '정렬 기준: 사건 발생 시각(event.at) 최신순(UTC). 조회 확인 시각은 학생 기록 입력에 전달되지 않아 확인 불가이며, 사건 시각을 조회 시각이라고 표시하지 않습니다.');
-      const sorted = [...data].sort((a, b) => Date.parse(b.at) - Date.parse(a.at));
+      const sorted = data
+        .map((event, index) => ({ event, index }))
+        .sort((a, b) =>
+          (Date.parse(b.event.at) - Date.parse(a.event.at)) ||
+          (a.index - b.index))
+        .map(({ event }) => event);
       const filters = document.createElement('div');
       root.append(filters);
       const optionsFrom = (values) => ['all', ...new Set(values.filter(v => typeof v === 'string' && v !== ''))];
@@ -213,7 +218,15 @@ export function createStudentView() {
       const kindFilter = createFilter('기록 종류', sorted.map(e => e.kind), v => `${kindNames[v] || '확인 불가'}(${v})`);
       const appFilter = createFilter('업무 앱', sorted.map(e => e.appId), v => v);
       const accessFilter = createFilter('접속 상태', sorted.map(e => e.state.access), v => displayStatus(accessNames, v));
+      const resetButton = document.createElement('button');
+      resetButton.type = 'button';
+      resetButton.textContent = '필터 초기화';
+      resetButton.setAttribute('data-argos-filter-reset', 'true');
+      filters.append(resetButton);
+
       const count = addText(root, 'p', '');
+      const statusSummary = addText(root, 'p', '');
+      statusSummary.setAttribute('data-argos-status-summary', 'true');
       const list = document.createElement('ul');
       root.append(list);
       let selectedId = null;
@@ -235,6 +248,17 @@ export function createStudentView() {
           && (accessFilter.value === 'all' || event.state.access === accessFilter.value));
         if (!visible.some(event => event.id === selectedId)) selectedId = null;
         count.textContent = `표시 ${visible.length}건 / 받은 기록 ${sorted.length}건`;
+        const allowedCount = visible.filter(
+          event => event.state.access === 'allowed').length;
+        const deniedCount = visible.filter(
+          event => event.state.access === 'denied').length;
+        const unknownCount = visible.length - allowedCount - deniedCount;
+
+        statusSummary.textContent =
+          '현재 표시 기록 · 허용 ' + allowedCount +
+          '건 / 거부 ' + deniedCount +
+          '건 / 확인 불가 ' + unknownCount + '건';
+
         list.replaceChildren();
         if (visible.length === 0) addText(list, 'li', '선택한 조건에 맞는 기록이 없습니다.');
         let focusButton = null;
@@ -292,6 +316,13 @@ export function createStudentView() {
       kindFilter.addEventListener('change', () => renderList());
       appFilter.addEventListener('change', () => renderList());
       accessFilter.addEventListener('change', () => renderList());
+
+      resetButton.addEventListener('click', () => {
+        kindFilter.value = 'all';
+        appFilter.value = 'all';
+        accessFilter.value = 'all';
+        renderList();
+      });
       renderList();
       return root;
     },
@@ -324,6 +355,83 @@ export function createStudentView() {
       else if (mode === 'disconnected') addText(root, 'p', '연결 없음(disconnected)');
       else if (mode === 'unknown') addText(root, 'p', '연결 상태 확인 불가(unknown)');
       addText(root, 'p', '자료별 상태를 분리해 표시합니다. 연결 없음·확인 불가는 보안 정상 판정이 아닙니다.');
+
+      // B patch: summarize only the received resource snapshots.
+      // Unknown, disconnected and demo data are not security assurances.
+      const summary = document.createElement('section');
+      summary.setAttribute('data-argos-protection-summary', 'true');
+      addText(summary, 'h3', '보호 현황 요약');
+
+      const countBy = (items, key) =>
+        items.filter(item => item?.status === key).length;
+
+      const isVerifiedCollection = resource =>
+        resource?.status === 'ok' &&
+        resource?.mode === 'connected' &&
+        mode !== 'demo' &&
+        mode !== 'disconnected' &&
+        mode !== 'unknown' &&
+        Array.isArray(resource.data);
+
+      if (isVerifiedCollection(devices)) {
+        const rows = devices.data;
+        addText(summary, 'p',
+          '등록 기기 ' + rows.length +
+          '대 · 기준 충족 ' + countBy(rows, 'compliant') +
+          ' · 미충족 ' + countBy(rows, 'noncompliant') +
+          ' · 확인 불가 ' +
+          (rows.length - countBy(rows, 'compliant') -
+           countBy(rows, 'noncompliant')));
+
+        if (rows.some(item => item?.status === 'noncompliant')) {
+          addText(summary, 'p', '주의: 보안 기준 미충족 기기를 확인하세요.');
+        }
+      } else {
+        addText(summary, 'p',
+          '기기 현황 확인 불가 · 실제 기기 상태를 확인하지 못했습니다.');
+      }
+
+      if (isVerifiedCollection(sessions)) {
+        const rows = sessions.data;
+        const active = countBy(rows, 'active');
+        const expired = countBy(rows, 'expired');
+        const revoked = countBy(rows, 'revoked');
+
+        addText(summary, 'p',
+          '세션 ' + rows.length +
+          '개 · 활성 ' + active +
+          ' · 만료 ' + expired +
+          ' · 철회 ' + revoked +
+          ' · 확인 불가 ' +
+          (rows.length - active - expired - revoked));
+
+        if (expired + revoked > 0) {
+          addText(summary, 'p',
+            '주의: 만료 또는 철회된 세션이 포함되어 있습니다.');
+        }
+      } else {
+        addText(summary, 'p',
+          '세션 현황 확인 불가 · 실제 연결 상태를 확인하지 못했습니다.');
+      }
+
+      if (mode === 'demo') {
+        addText(summary, 'p',
+          '예제 자료(demo) · 실제 보안 알림 건수가 아닙니다.');
+      } else if (Array.isArray(notifications)) {
+        addText(summary, 'p',
+          '전달받은 주의 알림 ' + notifications.length + '건');
+        if (notifications.length > 0) {
+          addText(summary, 'p', '주의: 알림의 내용을 확인하세요.');
+        } else {
+          addText(summary, 'p',
+            '알림 0건은 전체 시스템의 안전을 보장하지 않습니다.');
+        }
+      } else {
+        addText(summary, 'p',
+          '주의 알림 확인 불가 · 알림이 없다는 뜻이 아닙니다.');
+      }
+
+      root.append(summary);
 
       const renderCollection = (title, resource, emptyText, description) => {
         const section = document.createElement('section');
@@ -667,6 +775,7 @@ export function createStudentView() {
         add(`점검 시각(checkedAt): ${typeof checkedAt === 'string' && checkedAt ? checkedAt : '확인 불가'}`);
         if (data.modelCount === 0) add('현재 사용할 수 있는 모델이 없습니다. 담당자에게 모델 허용 설정을 확인하세요.');
         add('연결 및 모델 목록만 점검했습니다. 사건 설명은 아직 실행하지 않았습니다.');
+        add('점검 범위: AI 연결·이용 권한·모델 응답 확인. 사건 분석 성공이나 보안 조치 성공을 의미하지 않습니다.');
         add('사건 설명은 보안 기록에서 별도로 요청하고 결과를 확인해야 합니다.');
         return root;
       }
@@ -712,6 +821,8 @@ export function createStudentView() {
       if (status === 'error') {
         const failure = explainError(explanation?.error);
         add('h4', 'AI 설명 실패');
+        add('p', '분석 상태: 실패 · 검증된 AI 설명 없음');
+        add('p', '원본 사건 기록과 별도로 표시합니다. 실패를 사건 없음 또는 안전 판정으로 해석하지 않습니다.');
         add('p', '오류 코드: ' + failure.code);
         add('p', '오류 메시지: ' + failure.message);
         if (failure.code === 'ON_AI_INVALID_INPUT' || failure.code === 'EVENT_NOT_FOUND') {
@@ -797,9 +908,16 @@ export function createStudentView() {
       // 모든 검증을 마친 현재 사건에만 성공 속성을 붙인다.
       root.setAttribute('data-student-explanation-event', event.id);
       add('h4', 'AI 설명(참고용)');
+      const scope = add('p',
+        'AI 설명 상태: 응답 검증 통과 · 참고용');
+      scope.setAttribute('data-argos-ai-result-scope', 'reference');
+      add('p',
+        '검증 범위: 현재 선택한 사건의 근거 ID, 규칙, 조치 제안 및 응답 조건을 확인했습니다. 원천 사실이나 조치 효과를 독립적으로 재검증한 결과는 아닙니다.');
       add('p', '사건 ID: ' + event.id);
       add('p', 'AI 요약: ' + data.summary);
-      add('h5', '인용한 근거');
+      add('h5', '사건 원본 근거 · AI가 인용한 항목');
+      add('p',
+        '아래 항목은 현재 사건에 전달된 원본 근거와 일치하는 식별자입니다.');
       cited.forEach(id => add('p', id + ' — ' + byEvidenceId.get(id)));
       add('h5', '적용된 규칙');
       if (rules.length) rules.forEach(rule => add('p', rule.id + ' — ' + rule.text));
@@ -809,7 +927,7 @@ export function createStudentView() {
       const unknown = ['access', 'session', 'device'].filter(key => state[key] === 'unknown');
       if (unknown.length) unknown.forEach(key => add('p', names[key] + ': 확인 불가(unknown)'));
       else add('p', '없음');
-      add('h5', '조치 제안');
+      add('h5', 'AI 조치 제안 · 실행 결과 아님');
       if (!data.proposals.length) {
         add('p', supported.length === 0
           ? '연동 시스템이 지원하는 조치가 없어 AI 제안이 없습니다(정상).'
@@ -820,6 +938,7 @@ export function createStudentView() {
             ' — 근거 ID: ' + proposal.evidenceIds.join(', '));
         });
       }
+      add('p', '조치 상태: AI 응답상 미실행(executed: false). 실제 실행·효과는 별도의 원천 조치 결과로 확인해야 합니다.');
       add('p', '조치 제안은 사람이 확인해야 실행할 수 있으며, 현재 실행되지 않았습니다(requiresHumanConfirmation: true, executed: false).');
       if (typeof checkedAt === 'string' && Number.isFinite(Date.parse(checkedAt))) {
         add('p', '설명 확인 시각: ' + checkedAt);

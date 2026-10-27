@@ -48,3 +48,59 @@ test('request error cannot be labeled denied or allowed',()=>{
  assert.match(root.textContent,/접근 거부\(deny\) 판정이 아닙니다/);
  assert.doesNotMatch(root.textContent,/접속 판정: 접근 허용/);
 });
+
+
+test('UX B: connected resource counts and warnings', () => {
+ const root = view.renderStatus({
+  mode: 'connected',
+  devices: {status:'ok',mode:'connected',data:[
+   {id:'d1',label:'PC1',status:'compliant'},
+   {id:'d2',label:'PC2',status:'noncompliant'},
+   {id:'d3',label:'PC3',status:'unknown'}
+  ]},
+  sessions: {status:'ok',mode:'connected',data:[
+   {id:'s1',status:'active'},
+   {id:'s2',status:'expired'}
+  ]},
+  notifications:[{resource:'device',code:'TEST',message:'모의 알림'}],
+  diagnostics:{status:'idle'}
+ });
+ assert.match(root.textContent,/등록 기기 3대/);
+ assert.match(root.textContent,/기준 충족 1/);
+ assert.match(root.textContent,/미충족 1/);
+ assert.match(root.textContent,/세션 2개/);
+ assert.match(root.textContent,/만료 1/);
+ assert.match(root.textContent,/전달받은 주의 알림 1건/);
+ assert.match(root.textContent,/주의:/);
+});
+
+test('UX B: disconnected and demo never claim verified protection', () => {
+ const root = view.renderStatus({
+  mode:'demo',
+  devices:{status:'ok',mode:'demo',data:[
+   {id:'d1',label:'PC',status:'compliant'}
+  ]},
+  sessions:{status:'ok',mode:'demo',data:[
+   {id:'s1',status:'active'}
+  ]},
+  notifications:[],
+  diagnostics:{status:'idle'}
+ });
+ assert.match(root.textContent,/기기 현황 확인 불가/);
+ assert.match(root.textContent,/세션 현황 확인 불가/);
+ assert.match(root.textContent,/실제 보안 알림 건수가 아닙니다/);
+ assert.doesNotMatch(root.textContent,/등록 기기 1대/);
+});
+
+test('UX B: missing resources remain unknown', () => {
+ const root = view.renderStatus({
+  mode:'disconnected',
+  devices:{status:'error',mode:'disconnected',
+   error:{code:'ENGINE_NOT_CONNECTED',message:'연결 없음'}},
+  sessions:{status:'loading',mode:'disconnected'},
+  diagnostics:{status:'idle'}
+ });
+ assert.match(root.textContent,/기기 현황 확인 불가/);
+ assert.match(root.textContent,/세션 현황 확인 불가/);
+ assert.match(root.textContent,/주의 알림 확인 불가/);
+});

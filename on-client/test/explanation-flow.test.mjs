@@ -47,3 +47,43 @@ test('authorization error cannot reuse prior explanation success',()=>{
  assert.match(result.textContent,/AI 설명 실패/);
  assert.match(result.textContent,/기존 보안 기록은 그대로 유지됩니다/);
 });
+
+
+test('UX C: validated explanation clearly limits its scope', () => {
+ const root = render(reply);
+ assert.equal(
+  root.getAttribute('data-student-explanation-event'),
+  'fixture-A'
+ );
+ assert.match(root.textContent, /AI 설명 상태: 응답 검증 통과/);
+ assert.match(root.textContent, /원천 사실이나 조치 효과/);
+ assert.match(root.textContent, /사건 원본 근거/);
+ assert.match(root.textContent, /AI 조치 제안/);
+ assert.match(root.textContent, /실제 실행·효과/);
+ assert.match(root.textContent, /자동 집행하지 않습니다/);
+});
+
+test('UX C: failed explanation does not show validation success', () => {
+ const root = render({
+  status:'error', mode:'disconnected',
+  error:{code:'WB_CLCO_AUTH_REQUIRED',
+         message:'모의 인증 실패'}
+ });
+ assert.match(root.textContent, /분석 상태: 실패/);
+ assert.match(root.textContent, /사건 없음 또는 안전 판정/);
+ assert.doesNotMatch(root.textContent, /응답 검증 통과/);
+ assert.equal(
+  root.getAttribute('data-student-explanation-event'),
+  null
+ );
+});
+
+test('UX C: pending explanation has no validated-result marker', () => {
+ const root = render({status:'loading'});
+ assert.match(root.textContent, /AI 설명 요청 중/);
+ assert.doesNotMatch(root.textContent, /응답 검증 통과/);
+ assert.equal(
+  root.getAttribute('data-student-explanation-event'),
+  null
+ );
+});
