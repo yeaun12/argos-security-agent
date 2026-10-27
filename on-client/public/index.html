@@ -73,6 +73,20 @@
           </section>
         </div>
 
+
+        <section class="card provided" id="pc-metrics-card" aria-labelledby="pc-metrics-title">
+          <h2 id="pc-metrics-title">내 PC 상태 <span class="tag">총공세 2일차 · 로컬 실측</span></h2>
+          <p class="muted">이 앱 서버가 실행 중인 Windows PC의 자원입니다. 보안 Demo와 별개이며 악성코드 검사나 위험 판정이 아닙니다.</p>
+          <div class="row"><button type="button" class="btn" id="pc-metrics-load">PC 상태 다시 측정</button></div>
+          <p class="muted" id="pc-metrics-status" role="status" aria-live="polite">측정 전</p>
+          <dl class="identity">
+            <dt>CPU 사용률</dt><dd id="pc-cpu-value">측정 전</dd>
+            <dt>메모리 사용량</dt><dd id="pc-memory-value">측정 전</dd>
+            <dt>시스템 디스크 잔여 공간</dt><dd id="pc-disk-value">측정 전</dd>
+          </dl>
+          <div id="pc-metrics-change" aria-live="polite"><p class="muted">이전 실측이 없습니다.</p></div>
+        </section>
+
         <section class="card student" aria-labelledby="student-status-title">
           <h2 id="student-status-title">학생 상태·알림 표시 <span class="tag tag-student">student/extension.mjs · renderStatus</span></h2>
           <div id="student-status" class="student-slot" aria-live="polite"></div>

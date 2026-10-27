@@ -705,6 +705,77 @@ function renderSessions() {
   }));
 }
 
+
+// ---------- 총공세 2일차 · 로컬 Windows 실측 ----------
+let lastPcMeasurement=null, pcMeasurementGeneration=0;
+const PC_REASONS={
+ CPU_QUERY_FAILED:'Windows CPU 조회 실패',MEMORY_QUERY_FAILED:'Windows 메모리 조회 실패',
+ DISK_QUERY_FAILED:'Windows 디스크 조회 실패',MEASUREMENT_FAILED:'측정 프로그램 실행 또는 응답 실패',
+ UNSUPPORTED_PLATFORM:'Windows가 아닌 실행 환경',INVALID_RESULT:'측정값 검증 실패',
+};
+const pcStamp=v=>typeof v==='string'&&Number.isFinite(Date.parse(v))
+ ? new Date(v).toLocaleString('ko-KR',{hour12:false}) : '확인 불가';
+const pcFinite=v=>typeof v==='number'&&Number.isFinite(v);
+function pcValid(kind,v){
+ if(!v||typeof v!=='object'||!Number.isFinite(Date.parse(v.measuredAt)))return false;
+ if(v.status==='unavailable')return Object.hasOwn(PC_REASONS,v.reason);
+ if(v.status!=='ok')return false;
+ if(kind==='cpu')return pcFinite(v.usagePercent)&&v.usagePercent>=0&&v.usagePercent<=100;
+ if(kind==='memory')return pcFinite(v.usedGiB)&&pcFinite(v.totalGiB)&&pcFinite(v.usagePercent)
+  &&v.totalGiB>0&&v.usedGiB>=0&&v.usedGiB<=v.totalGiB&&v.usagePercent>=0&&v.usagePercent<=100;
+ return typeof v.drive==='string'&&/^[A-Z]:$/.test(v.drive)&&pcFinite(v.freeGiB)&&pcFinite(v.totalGiB)
+  &&v.totalGiB>0&&v.freeGiB>=0&&v.freeGiB<=v.totalGiB;
+}
+function pcText(kind,v){
+ const time=' · 측정/확인 시각 '+pcStamp(v.measuredAt);
+ if(v.status==='unavailable')return '확인 불가 · '+PC_REASONS[v.reason]+time;
+ if(kind==='cpu')return v.usagePercent.toFixed(1)+' %'+time;
+ if(kind==='memory')return v.usedGiB.toFixed(2)+' / '+v.totalGiB.toFixed(2)+' GiB'
+  +' · 사용률 '+v.usagePercent.toFixed(1)+' %'+time;
+ return v.drive+' 남은 공간 '+v.freeGiB.toFixed(2)+' GiB / 전체 '+v.totalGiB.toFixed(2)+' GiB'+time;
+}
+function pcClear(){
+ for(const id of ['pc-cpu-value','pc-memory-value','pc-disk-value'])$(id).textContent='확인 불가 · 현재 결과 없음';
+ $('pc-metrics-change').textContent='현재 측정을 확인하지 못해 직전 비교를 표시하지 않습니다.';
+}
+function pcRender(data){
+ const before=lastPcMeasurement;
+ const list=[['cpu','pc-cpu-value','CPU','usagePercent','%p'],['memory','pc-memory-value','메모리 사용률','usagePercent','%p'],['disk','pc-disk-value','디스크 여유','freeGiB','GiB']];
+ const changes=$('pc-metrics-change');changes.replaceChildren();
+ for(const [kind,id,name,field,unit] of list){
+  $(id).textContent=pcText(kind,data[kind]);
+  const p=document.createElement('p');p.className='muted';
+  if(before&&before[kind].status==='ok'&&data[kind].status==='ok'
+    &&(kind!=='disk'||before.disk.drive===data.disk.drive)){
+   const delta=data[kind][field]-before[kind][field];
+   p.textContent=name+' · 직전 유효 측정 대비 '+(delta>=0?'+':'')+delta.toFixed(unit==='GiB'?2:1)+' '+unit;
+  }else p.textContent=name+' · 비교 가능한 이전 실측 없음';
+  changes.append(p);
+ }
+ lastPcMeasurement=data;
+ const missing=list.filter(([kind])=>data[kind].status!=='ok').length;
+ $('pc-metrics-status').textContent='로컬 PC 실측 (보안 Demo와 별개) · '
+  +(missing?missing+'개 항목 확인 불가':'CPU·메모리·디스크 조회 완료')+' · 자동 외부 전송 없음';
+}
+async function loadPcMetrics(){
+ const gen=++pcMeasurementGeneration,button=$('pc-metrics-load');
+ button.disabled=true;$('pc-metrics-status').textContent='현재 Windows PC 정보를 측정 중…';pcClear();
+ try{
+  const response=await request('/api/pc-metrics');
+  if(gen!==pcMeasurementGeneration)return;
+  const data=response.data;
+  if(!response.ok||!data||!['windows-cim','not-supported'].includes(data.source)
+    ||!['cpu','memory','disk'].every(kind=>pcValid(kind,data[kind]))){
+   $('pc-metrics-status').textContent='확인 불가 · '
+    +(response.ok?'측정 응답이 올바르지 않습니다.':response.error.message);
+   return;
+  }
+  pcRender(data);
+ }catch{
+  if(gen===pcMeasurementGeneration)$('pc-metrics-status').textContent='확인 불가 · PC 상태 조회 중 오류가 발생했습니다.';
+ }finally{if(gen===pcMeasurementGeneration)button.disabled=false}
+}
+
 let diagnosticsText = '';
 
 async function loadDiagnostics() {
@@ -1330,7 +1401,8 @@ async function loadAll() {
 
 function init() {
   setupNav();
-  $('refresh').addEventListener('click', () => loadAll());
+  $('refresh').addEventListener('click', () => { loadAll(); loadPcMetrics(); });
+  $('pc-metrics-load').addEventListener('click', () => loadPcMetrics());
   $('diag-load').addEventListener('click', () => loadDiagnostics());
   $('diag-copy').addEventListener('click', () => copyDiagnostics());
   $('vulnerabilities-load').addEventListener('click', () => loadVulnerabilities());
@@ -1363,6 +1435,7 @@ function init() {
   renderAllStudent();
   loadStudentModule();
   loadAll();
+  loadPcMetrics();
 }
 
 init();
