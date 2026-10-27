@@ -6,6 +6,7 @@ import {randomUUID} from 'node:crypto';
 import {AsyncLocalStorage} from 'node:async_hooks';
 import {types} from 'node:util';
 import {readPcMetrics} from './pc-metrics.mjs';
+import {readPcEnvironment,describeSdpConnection} from './pc-environment.mjs';
 import {createActionService} from './actions/service.mjs';
 import {createSdpActionConfiguration} from './actions/sdp-action-engine.mjs';
 import {readActionStartupConfiguration} from './actions/action-startup-config.mjs';
@@ -681,6 +682,11 @@ export function createOnServer(serverOptions={}) {
         assertAlive();
         send(200,{ok:true,data:guide});return;
         }finally{closeNativeHostOperation(nativeOperation);}
+      }
+      if(req.method==='GET'&&url.pathname==='/api/pc-environment'){
+        const observation=await bounded(()=>readPcEnvironment());
+        const sdp=describeSdpConnection({mode,hostConfigured:!!sdpHostEngine});
+        send(200,{ok:true,data:{...observation,sdp}});return;
       }
       if(req.method==='GET'&&url.pathname==='/api/pc-metrics'){
         const data=await bounded(()=>readPcMetrics());

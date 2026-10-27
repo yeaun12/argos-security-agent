@@ -776,6 +776,111 @@ async function loadPcMetrics(){
  }finally{if(gen===pcMeasurementGeneration)button.disabled=false}
 }
 
+
+// ---------- 총공세 3일차 · Windows 읽기 전용 환경 및 조회 타임라인 ----------
+let pcEnvironmentGeneration=0;
+const pcEnvironmentHistory=[];
+const ENV_REASONS=Object.freeze({
+ NETWORK_QUERY_FAILED:'네트워크 조회 실패 또는 권한 부족',
+ FIREWALL_QUERY_FAILED:'방화벽 설정 조회 실패 또는 권한 부족',
+ EVENT_LOG_QUERY_FAILED:'이벤트 로그 조회 실패 또는 권한 부족',
+ MEASUREMENT_FAILED:'Windows 조회 프로그램 실행 실패',
+ UNSUPPORTED_PLATFORM:'Windows 외 운영체제',
+ INVALID_RESULT:'조회 결과 검증 실패',
+});
+const SDP_REASONS=Object.freeze({
+ DEMO_MODE:'SDP 미연결 · 현재는 예제(Demo) 모드',
+ SDP_NOT_CONFIGURED:'SDP 미연결 · 로컬 SDP 연결 구성 없음',
+ SDP_CONNECTION_UNVERIFIED:'확인 불가 · SDP 서버 연결의 실제 성공 여부를 검증하지 못함',
+});
+function pcEnvironmentValid(part,record){
+ if(!record||typeof record!=='object'||!Number.isFinite(Date.parse(record.measuredAt)))return false;
+ if(record.status==='unavailable')return Object.hasOwn(ENV_REASONS,record.reason);
+ if(record.status!=='ok')return false;
+ if(part==='network')return Array.isArray(record.adapters)&&Array.isArray(record.profiles)
+   &&record.adapters.every(x=>typeof x.name==='string'&&typeof x.status==='string'&&typeof x.linkSpeed==='string')
+   &&record.profiles.every(x=>typeof x.interfaceAlias==='string'&&typeof x.networkCategory==='string'
+     &&typeof x.ipv4Connectivity==='string'&&typeof x.ipv6Connectivity==='string');
+ if(part==='firewall')return Array.isArray(record.profiles)&&record.profiles.every(x=>typeof x.name==='string'
+   &&typeof x.enabled==='boolean'&&typeof x.defaultInboundAction==='string'&&typeof x.defaultOutboundAction==='string');
+ if(part==='events')return record.windowHours===24&&Array.isArray(record.logs)
+   &&record.logs.length===2&&record.logs.every(x=>['System','Application'].includes(x.name)
+     &&Number.isFinite(Date.parse(x.measuredAt))&&(x.status==='unavailable'
+       ? Object.hasOwn(ENV_REASONS,x.reason)
+       : x.status==='ok'&&Number.isSafeInteger(x.errors)&&x.errors>=0
+         &&Number.isSafeInteger(x.warnings)&&x.warnings>=0));
+ return false;
+}
+function pcEnvironmentText(part,data){
+ if(data.status==='unavailable')return '확인 불가 · '+ENV_REASONS[data.reason]+' · 확인 시각 '+pcStamp(data.measuredAt);
+ const at=' · 조회 시각 '+pcStamp(data.measuredAt);
+ if(part==='network'){
+  const adapters=data.adapters.map(x=>x.name+' ['+x.status+', '+x.linkSpeed+']');
+  const profiles=data.profiles.map(x=>x.interfaceAlias+' ['+x.networkCategory+', IPv4 '+x.ipv4Connectivity
+    +', IPv6 '+x.ipv6Connectivity+']');
+  return (adapters.length||profiles.length?[...adapters,...profiles].join(' / '):'확인된 네트워크 연결 없음')+at;
+ }
+ if(part==='firewall')return data.profiles.map(x=>x.name+' '+(x.enabled?'활성화':'비활성화')
+   +' (인바운드 '+x.defaultInboundAction+', 아웃바운드 '+x.defaultOutboundAction+')').join(' / ')+at;
+ return data.logs.map(x=>x.name+': '+(x.status==='ok'?'오류 '+x.errors+'건 · 경고 '+x.warnings+'건'
+   :'확인 불가 · '+ENV_REASONS[x.reason])).join(' / ')+at+' · 집계 범위 최근 24시간 · 침해 판정 아님';
+}
+function renderPcEnvironmentHistory(){
+ const root=$('pc-env-history');
+ const kind=$('pc-env-filter').value;
+ const items=pcEnvironmentHistory.filter(x=>kind==='all'||x.kind===kind);
+ root.replaceChildren();
+ if(!items.length){const p=document.createElement('p');p.className='muted';p.textContent='해당 종류의 조회 기록이 없습니다.';root.append(p);return;}
+ const list=document.createElement('ol');
+ for(const item of items){
+  const li=document.createElement('li');
+  li.textContent=pcStamp(item.at)+' · '+item.title+' · '+item.text;
+  list.append(li);
+ }
+ root.append(list);
+}
+function addPcEnvironmentHistory(data){
+ const now=new Date().toISOString();
+ const vals=[['network','네트워크',data.network],['firewall','방화벽',data.firewall],['events','이벤트',data.events]];
+ const sdp=data.sdp;
+ const rows=vals.map(([kind,title,value])=>({kind,title,at:now,text:pcEnvironmentText(kind,value)}));
+ rows.push({kind:'sdp',title:'SDP 연결',at:now,text:SDP_REASONS[sdp.reason]});
+ pcEnvironmentHistory.unshift(...rows);
+ pcEnvironmentHistory.length=Math.min(pcEnvironmentHistory.length,40);
+ renderPcEnvironmentHistory();
+}
+function clearPcEnvironmentCurrent(){
+ for(const id of ['pc-env-network','pc-env-firewall','pc-env-events'])$(id).textContent='확인 불가 · 현재 조회 전';
+ $('pc-env-sdp').textContent='확인 불가 · SDP 연결 확인 전';
+}
+async function loadPcEnvironment(){
+ const gen=++pcEnvironmentGeneration, button=$('pc-env-load');
+ button.disabled=true;
+ clearPcEnvironmentCurrent();
+ $('pc-env-status').textContent='로컬 Windows 정보를 읽는 중…';
+ try{
+  const response=await request('/api/pc-environment');
+  if(gen!==pcEnvironmentGeneration)return;
+  const data=response.data;
+  const valid=response.ok&&data&&['windows-readonly','unsupported'].includes(data.source)
+    &&['network','firewall','events'].every(part=>pcEnvironmentValid(part,data[part]))
+    &&data.sdp&&Object.hasOwn(SDP_REASONS,data.sdp.reason)
+    &&((data.sdp.status==='disconnected'&&['DEMO_MODE','SDP_NOT_CONFIGURED'].includes(data.sdp.reason))
+      ||(data.sdp.status==='unknown'&&data.sdp.reason==='SDP_CONNECTION_UNVERIFIED'));
+  if(!valid){
+   $('pc-env-status').textContent='확인 불가 · '+(response.ok?'조회 데이터가 계약과 일치하지 않습니다.':response.error.message);
+   return;
+  }
+  for(const [part,id] of [['network','pc-env-network'],['firewall','pc-env-firewall'],['events','pc-env-events']])
+    $(id).textContent=pcEnvironmentText(part,data[part]);
+  $('pc-env-sdp').textContent=SDP_REASONS[data.sdp.reason];
+  $('pc-env-status').textContent='읽기 전용 조회 완료 · Windows 값과 SDP 연결 상태는 별도 · 결과 자동 외부 전송 없음';
+  addPcEnvironmentHistory(data);
+ }catch{
+  if(gen===pcEnvironmentGeneration)$('pc-env-status').textContent='확인 불가 · 로컬 환경 조회 중 오류';
+ }finally{if(gen===pcEnvironmentGeneration)button.disabled=false;}
+}
+
 let diagnosticsText = '';
 
 async function loadDiagnostics() {
@@ -1401,7 +1506,9 @@ async function loadAll() {
 
 function init() {
   setupNav();
-  $('refresh').addEventListener('click', () => { loadAll(); loadPcMetrics(); });
+  $('refresh').addEventListener('click', () => { loadAll(); loadPcMetrics(); loadPcEnvironment(); });
+  $('pc-env-load').addEventListener('click', () => loadPcEnvironment());
+  $('pc-env-filter').addEventListener('change', () => renderPcEnvironmentHistory());
   $('pc-metrics-load').addEventListener('click', () => loadPcMetrics());
   $('diag-load').addEventListener('click', () => loadDiagnostics());
   $('diag-copy').addEventListener('click', () => copyDiagnostics());
@@ -1436,6 +1543,7 @@ function init() {
   loadStudentModule();
   loadAll();
   loadPcMetrics();
+  loadPcEnvironment();
 }
 
 init();

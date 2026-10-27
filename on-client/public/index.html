@@ -87,6 +87,32 @@
           <div id="pc-metrics-change" aria-live="polite"><p class="muted">이전 실측이 없습니다.</p></div>
         </section>
 
+
+        <section class="card provided" id="pc-environment-card" aria-labelledby="pc-environment-title">
+          <h2 id="pc-environment-title">연결·방화벽·Windows 기록 <span class="tag">총공세 3일차 · 읽기 전용</span></h2>
+          <p class="muted">Windows PC의 최근 24시간 이벤트를 조회합니다. 경고·오류 건수는 침해 또는 공격 탐지 결과가 아닙니다. 보안 설정은 변경하지 않습니다.</p>
+          <div class="row"><button type="button" class="btn" id="pc-env-load">PC 환경 다시 조회</button></div>
+          <p id="pc-env-status" class="muted" role="status" aria-live="polite">조회 전</p>
+          <dl class="identity">
+            <dt>네트워크</dt><dd id="pc-env-network">조회 전</dd>
+            <dt>Windows 방화벽</dt><dd id="pc-env-firewall">조회 전</dd>
+            <dt>Windows 이벤트</dt><dd id="pc-env-events">조회 전</dd>
+            <dt>SDP 서버 연결 (별도)</dt><dd id="pc-env-sdp">확인 불가 · 연결 확인 전</dd>
+          </dl>
+          <h3>PC 환경 조회 기록 (현재 세션에만 보관)</h3>
+          <div class="row">
+            <label for="pc-env-filter">기록 종류</label>
+            <select id="pc-env-filter">
+              <option value="all">전체</option>
+              <option value="network">네트워크</option>
+              <option value="firewall">방화벽</option>
+              <option value="events">Windows 이벤트</option>
+              <option value="sdp">SDP 연결</option>
+            </select>
+          </div>
+          <div id="pc-env-history" aria-live="polite"><p class="muted">조회 기록이 없습니다.</p></div>
+        </section>
+
         <section class="card student" aria-labelledby="student-status-title">
           <h2 id="student-status-title">학생 상태·알림 표시 <span class="tag tag-student">student/extension.mjs · renderStatus</span></h2>
           <div id="student-status" class="student-slot" aria-live="polite"></div>
