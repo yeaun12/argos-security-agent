@@ -760,7 +760,102 @@ function pcText(kind,v){
   +' · 사용률 '+v.usagePercent.toFixed(1)+' %'+time;
  return v.drive+' 남은 공간 '+v.freeGiB.toFixed(2)+' GiB / 전체 '+v.totalGiB.toFixed(2)+' GiB'+time;
 }
+/* ARGOS PORTFOLIO UX PATCH 2
+ * Only verified /api/pc-metrics responses feed visuals. Every sample is kept
+ * in memory for this page only; null samples break trend lines on failures.
+ * These metrics never indicate a security verdict or remote XDR detection.
+ */
+const pcDashboardHistory = {cpu:[],memory:[],disk:[]};
+const PC_DASHBOARD_LIMIT = 12;
+const pcDashboardKinds = ['cpu','memory','disk'];
+const pcDashboardSvgNS = 'http://www.w3.org/2000/svg';
+function pcDashboardPercentage(kind,item){
+  if(item?.status!=='ok')return null;
+  const value=kind==='disk'?item.freeGiB/item.totalGiB*100:item.usagePercent;
+  return Number.isFinite(value)&&value>=0&&value<=100?Math.round(value*10)/10:null;
+}
+function pcDashboardDraw(kind){
+  const svg=$('pc-viz-'+kind+'-chart');
+  for(const old of [...svg.querySelectorAll('.pc-viz-chart-line, .pc-viz-chart-point')])old.remove();
+  const samples=pcDashboardHistory[kind];
+  const valid=samples.filter(s=>s.value!==null);
+  if(!valid.length){svg.setAttribute('aria-label','이 페이지에서 확인한 '+kind+' 측정 이력 없음');return;}
+  svg.setAttribute('aria-label',kind+' 최근 '+valid.length+'회 유효 측정값. 실패 구간은 연결하지 않음');
+  const points=samples.map((s,i)=>{
+    if(s.value===null)return null;
+    return {x:8+(samples.length===1?112:i*224/(samples.length-1)),y:58-s.value*.50};
+  });
+  let sequence=[];
+  function flush(){
+    if(sequence.length>1){
+      const path=document.createElementNS(pcDashboardSvgNS,'path');
+      path.setAttribute('class','pc-viz-chart-line');
+      path.setAttribute('d',sequence.map((p,i)=>(i?'L':'M')+p.x.toFixed(2)+' '+p.y.toFixed(2)).join(' '));
+      svg.append(path);
+    }
+    sequence=[];
+  }
+  for(const point of points){
+    if(!point){flush();continue;}
+    sequence.push(point);
+  }
+  flush();
+  for(const point of points){
+    if(!point)continue;
+    const dot=document.createElementNS(pcDashboardSvgNS,'circle');
+    dot.setAttribute('class','pc-viz-chart-point');
+    dot.setAttribute('cx',point.x.toFixed(2));
+    dot.setAttribute('cy',point.y.toFixed(2));
+    dot.setAttribute('r','2.6');
+    svg.append(dot);
+  }
+}
+function pcDashboardUpdate(kind,status,item){
+  const card=document.querySelector('[data-pc-viz="'+kind+'"]');
+  const value=$('pc-viz-'+kind+'-value'),quality=$('pc-viz-'+kind+'-quality');
+  const note=$('pc-viz-'+kind+'-note'),fill=$('pc-viz-'+kind+'-fill');
+  card.dataset.state=status;
+  if(status==='ok'){
+    const percent=pcDashboardPercentage(kind,item);
+    if(percent===null){pcDashboardUpdate(kind,'unavailable');return;}
+    value.textContent=percent.toFixed(1);
+    fill.style.width=percent+'%';
+    quality.textContent='실측 확인';
+    const extra=kind==='disk'?' · 여유 '+item.freeGiB.toFixed(2)+' / '+item.totalGiB.toFixed(2)+' GiB'
+      :kind==='memory'?' · 사용 '+item.usedGiB.toFixed(2)+' / '+item.totalGiB.toFixed(2)+' GiB':'';
+    note.textContent=pcStamp(item.measuredAt)+extra;
+    return;
+  }
+  value.textContent='--';
+  fill.style.width='0%';
+  quality.textContent=status==='loading'?'측정 중':status==='idle'?'측정 전':'확인 불가';
+  note.textContent=status==='loading'?'Windows 측정값을 확인하는 중':status==='idle'?'측정값을 기다리는 중':'현재 측정 확인 불가 · 그래프는 이전 실측 이력';
+}
+function pcDashboardPending(){
+  for(const kind of pcDashboardKinds)pcDashboardUpdate(kind,'loading');
+}
+function pcDashboardUnavailable(){
+  const now=new Date().toISOString();
+  for(const kind of pcDashboardKinds){
+    pcDashboardUpdate(kind,'unavailable');
+    pcDashboardHistory[kind].push({at:now,value:null});
+    if(pcDashboardHistory[kind].length>PC_DASHBOARD_LIMIT)pcDashboardHistory[kind].shift();
+    pcDashboardDraw(kind);
+  }
+}
+function pcDashboardRender(data){
+  for(const kind of pcDashboardKinds){
+    const item=data[kind];
+    const percentage=pcDashboardPercentage(kind,item);
+    const valid=item?.status==='ok'&&percentage!==null;
+    pcDashboardUpdate(kind,valid?'ok':'unavailable',item);
+    pcDashboardHistory[kind].push({at:item.measuredAt,value:valid?percentage:null});
+    if(pcDashboardHistory[kind].length>PC_DASHBOARD_LIMIT)pcDashboardHistory[kind].shift();
+    pcDashboardDraw(kind);
+  }
+}
 function pcClear(){
+ pcDashboardPending();
  setReadFailure('pc-metrics-alert',[],'');
  for(const id of ['pc-cpu-value','pc-memory-value','pc-disk-value'])$(id).textContent='확인 불가 · 현재 결과 없음';
  $('pc-metrics-change').textContent='현재 측정을 확인하지 못해 직전 비교를 표시하지 않습니다.';
@@ -780,6 +875,7 @@ function pcRender(data){
   changes.append(p);
  }
  lastPcMeasurement=data;
+ pcDashboardRender(data);
  const failures=list.filter(([kind])=>data[kind].status!=='ok').map(([, ,label])=>label);
  setReadFailure('pc-metrics-alert',failures,'Windows 조회 권한과 실행 상태를 확인하고 「PC 상태 다시 측정」을 누르세요. 계속 실패하면 관리자에게 문의하세요.');
  const missing=failures.length;
@@ -796,6 +892,7 @@ async function loadPcMetrics(){
   if(!response.ok||!data||!['windows-cim','not-supported'].includes(data.source)
     ||!['cpu','memory','disk'].every(kind=>pcValid(kind,data[kind]))){
    $('pc-metrics-status').textContent='확인 불가 · PC 측정 요청이 실패했습니다.';
+   pcDashboardUnavailable();
    setReadFailure('pc-metrics-alert',['CPU·메모리·디스크 조회'],'서버 실행 상태를 확인하고 「PC 상태 다시 측정」을 다시 누르세요. 원인이 계속되면 관리자에게 문의하세요.');
    return;
   }
@@ -803,6 +900,7 @@ async function loadPcMetrics(){
  }catch{
   if(gen===pcMeasurementGeneration){
    $('pc-metrics-status').textContent='확인 불가 · PC 상태 조회 중 오류가 발생했습니다.';
+   pcDashboardUnavailable();
    setReadFailure('pc-metrics-alert',['CPU·메모리·디스크 조회'],'서버가 실행 중인지 확인하고 「PC 상태 다시 측정」을 다시 누르세요.');
   }
  }finally{if(gen===pcMeasurementGeneration)button.disabled=false}

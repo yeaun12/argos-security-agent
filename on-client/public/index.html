@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self'; object-src 'none'; base-uri 'none'; form-action 'none'">
   <meta name="referrer" content="no-referrer">
-  <title>케셰브 · ZTNA &amp; XDR</title>
+  <title>ARGOS · Security Operations Console</title>
   <link rel="stylesheet" href="/style.css">
   <script type="module" src="/app.js"></script>
 </head>
@@ -16,7 +16,7 @@
     <div class="brand">
       <img class="alekov-art brand-icon" src="/assets/alekov/alekov-app-icon.webp" alt="" aria-hidden="true" width="32" height="32" draggable="false">
       <span class="brand-mark" id="brand-mark-fallback" aria-hidden="true" hidden>A</span>
-      <span class="brand-name">케셰브 <small>ZTNA &amp; XDR 보안 Agent</small></span>
+      <span class="brand-name">ARGOS <small>Security Operations Console · 케셰브</small></span>
     </div>
     <div class="topbar-status">
       <span id="mode-badge" class="mode-badge" data-mode="loading" role="status" aria-live="polite">상태 확인 중</span>
@@ -44,17 +44,49 @@
       </p>
 
       <section class="card quick-overview" aria-labelledby="quick-overview-title">
-        <h1 id="quick-overview-title">ARGOS 주요 기능</h1>
-        <p class="muted">먼저 기록을 살피고, Windows PC 실측값을 확인한 뒤 주의 알림을 검토합니다. 예제 보안 데이터는 실측값이 아닙니다.</p>
+        <div class="quick-hero-grid">
+          <div class="quick-hero-content">
+            <p class="quick-kicker"><span class="kicker-line" aria-hidden="true"></span> SECURITY OPERATIONS / ARGOS</p>
+            <h1 id="quick-overview-title">보안의 흐름을 읽는<br><span>나만의 관제 콘솔</span></h1>
+            <p class="quick-lead">사건 기록을 살펴보고, Windows PC의 실제 상태를 측정하고, 주의 신호와 확인 불가 항목을 분리해 검토합니다.</p>
+            <div class="quick-hero-points" aria-label="대시보드 확인 범위">
+              <span>사건 기록 확인</span>
+              <span>로컬 PC 실측</span>
+              <span>연결 상태 구분</span>
+            </div>
+          </div>
+          <div class="quick-hero-art" aria-hidden="true">
+            <div class="radar-orbit radar-orbit-outer"></div>
+            <div class="radar-orbit radar-orbit-middle"></div>
+            <div class="radar-orbit radar-orbit-inner"></div>
+            <div class="radar-axis radar-axis-x"></div>
+            <div class="radar-axis radar-axis-y"></div>
+            <div class="radar-sweep"></div>
+            <div class="radar-core"><span>ARGOS</span><small>OBSERVE / VERIFY</small></div>
+            <div class="radar-dot radar-dot-a"></div>
+            <div class="radar-dot radar-dot-b"></div>
+            <span class="radar-corner radar-corner-tl"></span><span class="radar-corner radar-corner-br"></span>
+          </div>
+        </div>
+        <div class="quick-actions-heading">
+          <div><p class="quick-kicker">QUICK ACCESS</p><h2>주요 기능 바로가기</h2></div>
+          <p>실제 PC 조회와 보안 Demo는 서로 다른 데이터입니다.</p>
+        </div>
         <div class="quick-actions" role="group" aria-label="핵심 기능 바로가기">
           <button type="button" class="quick-action" data-quick-view="records" data-quick-target="records-title">
-            <strong>1 · 기록 보기</strong><span>접속·XDR 기록과 조회 시각 확인</span>
+            <span class="quick-action-index" aria-hidden="true">01 / INVESTIGATE</span>
+            <strong>1 · 기록 보기</strong><span>접속·XDR 사건 발생 시각과 상세 근거</span>
+            <span class="quick-action-go" aria-hidden="true">기록 탐색 <span>↗</span></span>
           </button>
           <button type="button" class="quick-action" data-quick-view="protection" data-quick-target="pc-metrics-title">
-            <strong>2 · 내 PC 상태</strong><span>CPU·메모리·디스크 로컬 실측</span>
+            <span class="quick-action-index" aria-hidden="true">02 / OBSERVE</span>
+            <strong>2 · 내 PC 상태</strong><span>CPU·메모리·디스크의 Windows 로컬 실측</span>
+            <span class="quick-action-go" aria-hidden="true">상태 측정 <span>↗</span></span>
           </button>
           <button type="button" class="quick-action" data-quick-view="protection" data-quick-target="student-status-title">
-            <strong>3 · 위험 알림</strong><span>전달된 주의 알림·확인 불가 구분</span>
+            <span class="quick-action-index" aria-hidden="true">03 / VERIFY</span>
+            <strong>3 · 위험 알림</strong><span>주의 신호와 확인 불가 상태를 구분</span>
+            <span class="quick-action-go" aria-hidden="true">상태 검토 <span>↗</span></span>
           </button>
         </div>
       </section>
@@ -96,6 +128,40 @@
           <div class="row"><button type="button" class="btn" id="pc-metrics-load">PC 상태 다시 측정</button></div>
           <p class="muted" id="pc-metrics-status" role="status" aria-live="polite">측정 전</p>
           <div class="read-failure" id="pc-metrics-alert" role="alert" hidden></div>
+        <!-- ARGOS PORTFOLIO UX PATCH 2: all values come from /api/pc-metrics; no illustrative measurements. -->
+        <section class="pc-viz" id="pc-metrics-visual" aria-labelledby="pc-viz-title">
+          <div class="pc-viz-heading">
+            <div><p class="pc-viz-kicker">WINDOWS TELEMETRY / LOCAL</p><h3 id="pc-viz-title">실시간 조회 기반 PC 모니터링</h3></div>
+            <span class="pc-viz-explain">자동 스트리밍 아님 · 조회 성공 시 갱신</span>
+          </div>
+          <div class="pc-viz-cards">
+            <article class="pc-viz-card" data-pc-viz="cpu" data-state="idle" aria-labelledby="pc-viz-cpu-title">
+              <div class="pc-viz-card-head"><span class="pc-viz-kind">CPU</span><span class="pc-viz-quality" id="pc-viz-cpu-quality">측정 전</span></div>
+              <h4 id="pc-viz-cpu-title">CPU 사용률</h4>
+              <div class="pc-viz-main"><strong id="pc-viz-cpu-value">--</strong><span class="pc-viz-unit">%</span></div>
+              <div class="pc-viz-track" aria-hidden="true"><span class="pc-viz-fill" id="pc-viz-cpu-fill"></span></div>
+              <svg id="pc-viz-cpu-chart" class="pc-viz-chart" viewBox="0 0 240 66" role="img" aria-label="실제 CPU 사용률 측정 이력 없음" focusable="false"><path class="pc-viz-guide" d="M0 17H240 M0 33H240 M0 49H240"/></svg>
+              <p class="pc-viz-foot" id="pc-viz-cpu-note">측정값을 기다리는 중</p>
+            </article>
+            <article class="pc-viz-card" data-pc-viz="memory" data-state="idle" aria-labelledby="pc-viz-memory-title">
+              <div class="pc-viz-card-head"><span class="pc-viz-kind">RAM</span><span class="pc-viz-quality" id="pc-viz-memory-quality">측정 전</span></div>
+              <h4 id="pc-viz-memory-title">메모리 사용률</h4>
+              <div class="pc-viz-main"><strong id="pc-viz-memory-value">--</strong><span class="pc-viz-unit">%</span></div>
+              <div class="pc-viz-track" aria-hidden="true"><span class="pc-viz-fill" id="pc-viz-memory-fill"></span></div>
+              <svg id="pc-viz-memory-chart" class="pc-viz-chart" viewBox="0 0 240 66" role="img" aria-label="실제 사용 메모리 비율 측정 이력 없음" focusable="false"><path class="pc-viz-guide" d="M0 17H240 M0 33H240 M0 49H240"/></svg>
+              <p class="pc-viz-foot" id="pc-viz-memory-note">측정값을 기다리는 중</p>
+            </article>
+            <article class="pc-viz-card" data-pc-viz="disk" data-state="idle" aria-labelledby="pc-viz-disk-title">
+              <div class="pc-viz-card-head"><span class="pc-viz-kind">DISK</span><span class="pc-viz-quality" id="pc-viz-disk-quality">측정 전</span></div>
+              <h4 id="pc-viz-disk-title">시스템 디스크 여유</h4>
+              <div class="pc-viz-main"><strong id="pc-viz-disk-value">--</strong><span class="pc-viz-unit">%</span></div>
+              <div class="pc-viz-track" aria-hidden="true"><span class="pc-viz-fill" id="pc-viz-disk-fill"></span></div>
+              <svg id="pc-viz-disk-chart" class="pc-viz-chart" viewBox="0 0 240 66" role="img" aria-label="실제 시스템 디스크 여유 비율 측정 이력 없음" focusable="false"><path class="pc-viz-guide" d="M0 17H240 M0 33H240 M0 49H240"/></svg>
+              <p class="pc-viz-foot" id="pc-viz-disk-note">측정값을 기다리는 중</p>
+            </article>
+          </div>
+          <p class="pc-viz-disclaimer">이 그래프는 이 페이지에서 확인한 최근 최대 12회의 실제 로컬 측정값만 사용합니다. 측정 실패 구간은 연결하지 않으며, CPU·메모리·디스크 수치를 위협 탐지나 보안 안전 판정으로 해석하지 않습니다.</p>
+        </section>
           <dl class="identity">
             <dt>CPU 사용률</dt><dd id="pc-cpu-value">측정 전</dd>
             <dt>메모리 사용량</dt><dd id="pc-memory-value">측정 전</dd>

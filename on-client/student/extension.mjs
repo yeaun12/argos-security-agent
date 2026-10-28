@@ -218,6 +218,17 @@ export function createStudentView() {
       const kindFilter = createFilter('기록 종류', sorted.map(e => e.kind), v => `${kindNames[v] || '확인 불가'}(${v})`);
       const appFilter = createFilter('업무 앱', sorted.map(e => e.appId), v => v);
       const accessFilter = createFilter('접속 상태', sorted.map(e => e.state.access), v => displayStatus(accessNames, v));
+      // Local filter only; never sends search text to the app server.
+      const searchLabel = document.createElement('label');
+      searchLabel.textContent = '현재 받은 기록에서 검색: ';
+      const search = document.createElement('input');
+      search.type = 'search';
+      search.setAttribute('aria-label', '현재 받은 기록에서 검색');
+      search.setAttribute('placeholder', '사건 ID · 요약 · 앱 ID');
+      search.setAttribute('autocomplete', 'off');
+      searchLabel.append(search);
+      filters.append(searchLabel);
+      addText(root, 'p', '검색·필터는 현재 전달된 본인 기록 안에서만 적용됩니다. 전체 서버 로그를 검색하지 않습니다.');
       const resetButton = document.createElement('button');
       resetButton.type = 'button';
       resetButton.textContent = '필터 초기화';
@@ -227,8 +238,18 @@ export function createStudentView() {
       const count = addText(root, 'p', '');
       const statusSummary = addText(root, 'p', '');
       statusSummary.setAttribute('data-argos-status-summary', 'true');
+      const workspace = document.createElement('section');
+      workspace.className = 'argos-v11-workspace';
+      workspace.setAttribute('data-argos-v11-workspace', 'true');
+      const timeline = document.createElement('div');
+      timeline.className = 'argos-v11-timeline';
       const list = document.createElement('ul');
-      root.append(list);
+      timeline.append(list);
+      const investigation = document.createElement('aside');
+      investigation.className = 'argos-v11-investigation';
+      investigation.setAttribute('aria-label', '선택한 사건의 조사 가이드');
+      workspace.append(timeline, investigation);
+      root.append(workspace);
       let selectedId = null;
 
       const addRows = (parent, title, rows) => {
@@ -245,7 +266,9 @@ export function createStudentView() {
         const visible = sorted.filter(event =>
           (kindFilter.value === 'all' || event.kind === kindFilter.value)
           && (appFilter.value === 'all' || event.appId === appFilter.value)
-          && (accessFilter.value === 'all' || event.state.access === accessFilter.value));
+          && (accessFilter.value === 'all' || event.state.access === accessFilter.value)
+          && [event.id, event.summary, event.appId].some(value =>
+            String(value ?? '').toLocaleLowerCase('ko-KR').includes(search.value.trim().toLocaleLowerCase('ko-KR'))));
         if (!visible.some(event => event.id === selectedId)) selectedId = null;
         count.textContent = `표시 ${visible.length}건 / 받은 기록 ${sorted.length}건`;
         const allowedCount = visible.filter(
@@ -259,6 +282,30 @@ export function createStudentView() {
           '건 / 거부 ' + deniedCount +
           '건 / 확인 불가 ' + unknownCount + '건';
 
+        // This pane mirrors the selected source event; it does not infer severity.
+        investigation.replaceChildren();
+        const selectedEvent = visible.find(event => event.id === selectedId);
+        if (!selectedEvent) {
+          addText(investigation, 'h4', '사건 조사 가이드');
+          addText(investigation, 'p', '왼쪽 기록의 「상세」를 선택하면 조사 순서가 나타납니다.');
+          addText(investigation, 'p', '01 · 사건 시각·출처 확인 → 02 · 근거와 규칙 검토 → 03 · 필요할 때 AI 설명 요청 → 04 · 사람의 최종 판단');
+        } else {
+          addText(investigation, 'h4', '선택한 사건 · ' + selectedEvent.id);
+          addText(investigation, 'p', '발생 시각: ' + selectedEvent.at);
+          addText(investigation, 'p', '원본 자료: ' + (mode === 'demo' ? 'Demo 예제 · 실제 침해 기록 아님' : mode === 'connected' ? '연결된 서비스에서 전달한 본인 기록' : '출처 확인 불가'));
+          addText(investigation, 'p', '접속: ' + displayStatus(accessNames, selectedEvent.state.access));
+          addText(investigation, 'p', '기기: ' + displayStatus(deviceNames, selectedEvent.state.device));
+          addText(investigation, 'p', '세션: ' + displayStatus(sessionNames, selectedEvent.state.session));
+          const eCount = Array.isArray(selectedEvent.evidence) ? selectedEvent.evidence.length : 0;
+          const rCount = Array.isArray(selectedEvent.rules) ? selectedEvent.rules.length : 0;
+          addText(investigation, 'p', '전달된 근거 ' + eCount + '건 · 규칙 ' + rCount + '건');
+          addText(investigation, 'h5', '다음 조사 순서');
+          addText(investigation, 'p', '01 · 왼쪽 상세에서 근거 ID와 규칙을 확인합니다.');
+          addText(investigation, 'p', '02 · 필요하면 제공 기록 카드의 「AI 설명 요청」을 사용합니다. AI 결과는 참고 정보입니다.');
+          addText(investigation, 'p', '03 · 상태가 확인 불가라면 정상으로 간주하지 말고 원천 자료를 다시 확인합니다.');
+          addText(investigation, 'p', '04 · AI 제안과 원천 근거를 검토한 뒤 최종 판단은 사람이 수행합니다.');
+          addText(investigation, 'p', '보안 조치 실행은 이 패널에서 지원하지 않습니다.');
+        }
         list.replaceChildren();
         if (visible.length === 0) addText(list, 'li', '선택한 조건에 맞는 기록이 없습니다.');
         let focusButton = null;
@@ -316,11 +363,13 @@ export function createStudentView() {
       kindFilter.addEventListener('change', () => renderList());
       appFilter.addEventListener('change', () => renderList());
       accessFilter.addEventListener('change', () => renderList());
+      search.addEventListener('input', () => renderList());
 
       resetButton.addEventListener('click', () => {
         kindFilter.value = 'all';
         appFilter.value = 'all';
         accessFilter.value = 'all';
+        search.value = '';
         renderList();
       });
       renderList();
@@ -431,7 +480,57 @@ export function createStudentView() {
           '주의 알림 확인 불가 · 알림이 없다는 뜻이 아닙니다.');
       }
 
-      root.append(summary);
+      // ARGOS v1.1: a decision aid built only from supplied, scoped resources.
+      // It neither scores threats nor converts missing/demo data into a clean bill of health.
+      const triage = document.createElement('section');
+      triage.className = 'argos-v11-triage';
+      triage.setAttribute('data-argos-v11-overview', 'true');
+      addText(triage, 'h3', '보안 상태 · 무엇부터 확인할까요?');
+      addText(triage, 'p', '현재 전달된 내 기기·세션·알림만 요약합니다. PC 실측값, XDR 예제 기록과는 별개의 확인 범위입니다.');
+      const triageCards = document.createElement('div');
+      triageCards.className = 'argos-v11-triage-grid';
+      const triageCard = (title, label, next, level) => {
+        const card = document.createElement('article');
+        card.className = 'argos-v11-triage-card';
+        card.setAttribute('data-argos-v11-level', level);
+        addText(card, 'h4', title);
+        addText(card, 'strong', label);
+        addText(card, 'p', next);
+        triageCards.append(card);
+      };
+      const notVerified = (resource) => resource?.status === 'loading'
+        ? ['조회 중', '조회가 끝나면 다시 확인하세요.', 'pending']
+        : ['확인 불가', '위쪽 「다시 불러오기」로 상태를 확인하세요.', 'unknown'];
+      if (!isVerifiedCollection(devices)) {
+        triageCard('01 · 내 기기', ...notVerified(devices));
+      } else if (devices.data.some(x => x?.status === 'noncompliant')) {
+        triageCard('01 · 내 기기', '보안 기준 미충족 포함', '아래 기기 목록에서 해당 기기를 확인하세요.', 'attention');
+      } else if (devices.data.some(x => x?.status !== 'compliant')) {
+        triageCard('01 · 내 기기', '상태 확인 필요', '확인 불가로 표시된 기기를 확인하세요.', 'unknown');
+      } else {
+        triageCard('01 · 내 기기', '받은 기기 목록 조회 완료', '기기별 준수 결과를 아래에서 확인하세요. 전체 보안 안전 판정은 아닙니다.', 'observed');
+      }
+      if (!isVerifiedCollection(sessions)) {
+        triageCard('02 · 내 세션', ...notVerified(sessions));
+      } else if (sessions.data.some(x => ['expired','revoked'].includes(x?.status))) {
+        triageCard('02 · 내 세션', '만료·철회 상태 포함', '아래 세션 목록에서 실제 상태를 확인하세요.', 'attention');
+      } else if (sessions.data.some(x => x?.status !== 'active')) {
+        triageCard('02 · 내 세션', '상태 확인 필요', '확인 불가로 표시된 세션을 확인하세요.', 'unknown');
+      } else {
+        triageCard('02 · 내 세션', '받은 세션 목록 조회 완료', '현재 전달된 범위의 세션 상태입니다. 과거 세션 전체가 아닙니다.', 'observed');
+      }
+      if (mode !== 'connected' || !Array.isArray(notifications)) {
+        triageCard('03 · 주의 알림', mode === 'demo' ? '예제 자료' : '확인 불가',
+          '실제 연결과 알림 자료를 확인하세요. 알림이 0건이라는 뜻이 아닙니다.', 'unknown');
+      } else if (notifications.length > 0) {
+        triageCard('03 · 주의 알림', '전달된 알림 ' + notifications.length + '건',
+          '아래 알림 내용과 관련 보안 기록을 확인하세요.', 'attention');
+      } else {
+        triageCard('03 · 주의 알림', '전달된 알림 0건',
+          '조회 범위 안에 표시할 알림이 없다는 뜻입니다. 전체 시스템에 대한 안전 판정은 아닙니다.', 'observed');
+      }
+      triage.append(triageCards);
+      root.append(triage, summary);
 
       const renderCollection = (title, resource, emptyText, description) => {
         const section = document.createElement('section');
@@ -907,6 +1006,26 @@ export function createStudentView() {
 
       // 모든 검증을 마친 현재 사건에만 성공 속성을 붙인다.
       root.setAttribute('data-student-explanation-event', event.id);
+      // Display only after all existing explanation/evidence validation succeeds.
+      const briefing = document.createElement('section');
+      briefing.className = 'argos-v11-ai-briefing';
+      briefing.setAttribute('data-argos-v11-ai-briefing', 'true');
+      const briefText = (tag, value) => {
+        const node = document.createElement(tag);
+        node.textContent = value;
+        briefing.append(node);
+      };
+      briefText('h4', '케셰브 · 근거 기반 조사 브리핑');
+      briefText('p', '선택한 사건: ' + event.id + ' · AI 설명 응답의 근거 결속 검사 통과');
+      briefText('p', '사건 요약: ' + data.summary);
+      briefText('p', '인용 근거: ' + cited.length + '건 / 전달 근거: ' + evidence.length + '건');
+      briefText('p', '조치 제안: ' + data.proposals.length + '건 · 미실행 · 사람 확인 필요');
+      const unknownParts = ['access', 'session', 'device'].filter(key => state[key] === 'unknown');
+      briefText('p', unknownParts.length
+        ? '확인되지 않은 상태: ' + unknownParts.map(key => ({access:'접속',session:'세션',device:'기기'})[key]).join(', ')
+        : '상태값 unknown 항목 없음 · 전체 시스템의 안전을 증명하지는 않습니다.');
+      briefText('p', '이 브리핑은 원본 데이터와 AI 응답의 일치 범위만 보여줍니다. 실제 공격 판단이나 조치 성공을 보증하지 않습니다.');
+      root.append(briefing);
       add('h4', 'AI 설명(참고용)');
       const scope = add('p',
         'AI 설명 상태: 응답 검증 통과 · 참고용');
